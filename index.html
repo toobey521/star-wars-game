@@ -70,6 +70,7 @@ var player={x:c.width/2,y:c.height-80,w:40,h:40,cd:0};
 var bullets=[],enemies=[],ebullets=[],particles=[],boss=null;
 var stars=[];
 for(var i=0;i<100;i++)stars.push({x:Math.random()*c.width,y:Math.random()*c.height,sz:Math.random()*2+0.5,sp:Math.random()*1.2+0.3});
+var killCount=0; // enemies killed in current level
 
 function rc(a,b){return a.x-a.w/2<b.x+b.w/2&&a.x+a.w/2>b.x-b.w/2&&a.y-a.h/2<b.y+b.h/2&&a.y+a.h/2>b.y-b.h/2;}
 function se(){var cfg=glc(G.level);if(enemies.length<cfg.sm)enemies.push({x:Math.random()*(c.width-60)+30,y:-30,w:30,h:30,hp:1,sp:cfg.sp+Math.random()*0.5,ft:Math.floor(Math.random()*cfg.fr)});}
@@ -80,11 +81,11 @@ function il(l, preserveWpn){
   if(!preserveWpn){
     G.level=l;G.score=0;
   }else{
-    // Carry over weapon level to next level
     var wl=gw(G.score);
     G.level=l;
     G.score=Math.max(0,(wl-1)*10);
   }
+  killCount=0; // reset kill counter
   bullets=[];enemies=[];ebullets=[];particles=[];boss=null;
   player.x=G.mx;player.y=Math.min(G.my,c.height-30);
   var cfg=glc(l);
@@ -112,18 +113,18 @@ function update(){
     if(bullets[i].y<-20){bullets.splice(i,1);continue;}
     var hit=false;
     for(var j=enemies.length-1;j>=0;j--){
-      if(rc(bullets[i],enemies[j])){ap(enemies[j].x,enemies[j].y,'#f5a623',10);enemies.splice(j,1);G.score+=10;hit=true;break;}
+      if(rc(bullets[i],enemies[j])){ap(enemies[j].x,enemies[j].y,'#f5a623',10);enemies.splice(j,1);G.score+=10;killCount++;hit=true;break;}
     }
     if(hit){bullets.splice(i,1);continue;}
-    if(boss&&rc(bullets[i],boss)){boss.hp--;boss.hf=8;ap(bullets[i].x,bullets[i].y,'#e74c3c',5);bullets.splice(i,1);G.score+=5;if(boss.hp<=0){ap(boss.x,boss.y,'#e74c3c',40);boss=null;G.score+=50;}continue;}
+    if(boss&&rc(bullets[i],boss)){boss.hp--;boss.hf=8;ap(bullets[i].x,bullets[i].y,'#e74c3c',5);bullets.splice(i,1);G.score+=5;if(boss.hp<=0){ap(boss.x,boss.y,'#e74c3c',40);boss=null;G.score+=50;killCount++;}continue;}
   }
   
   // Normal enemy spawning
   if(G.frame%cfg.sr===0&&enemies.length<cfg.sm)se();
   // Boss level: spawn boss when ready
   if(cfg.ba&&!boss&&enemies.length===0&&G.frame>120)sb();
-  // After boss dies, respawn enemies if still need points
-  if(cfg.ba&&!boss&&G.score<200){
+  // After boss dies, respawn enemies if still need kills
+  if(cfg.ba&&!boss&&killCount<20){
     if(G.frame%60===0&&enemies.length<cfg.sm)se();
   }
   
@@ -185,16 +186,41 @@ function update(){
   
   for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1);}
   
-  // Win / Level clear: earn 200 points within each level
-  if(G.level===G.maxLevel&&!boss&&enemies.length===0&&G.frame>180&&G.score>=200){G.state='win';return;}
+  // Win / Level clear: kill 20 enemies in each level
+  if(G.level===G.maxLevel&&!boss&&enemies.length===0&&G.frame>180&&killCount>=20){celebrate();G.state='win';return;}
   if(!cfg.ba){
-    if(G.score>=200&&enemies.length===0&&G.frame>120){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+    if(killCount>=20&&enemies.length===0&&G.frame>120){celebrate();G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
   }else{
-    if(!boss&&enemies.length===0&&G.frame>180&&G.score>=200){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+    if(!boss&&enemies.length===0&&G.frame>180&&killCount>=20){celebrate();G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
   }
 }
 
 // ===== Hit Player ======
+function celebrate(){
+  // Victory celebration particles
+  for(var i=0;i<60;i++){
+    var a=Math.random()*6.28,s=Math.random()*5+2;
+    var col=['#f5a623','#4a7cf7','#27ae60','#e74c3c','#fff','#8e44ad'][Math.floor(Math.random()*6)];
+    particles.push({x:c.width/2+Math.random()*c.width*0.6-c.width*0.3,
+      y:c.height/2+Math.random()*c.height*0.4-c.height*0.2,
+      vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:60+Math.random()*40,ml:100,col:col,sz:Math.random()*6+3});
+  }
+  // Try to play a victory sound
+  try{
+    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    var notes=[523,659,784,1047];
+    for(var i=0;i<notes.length;i++){
+      var osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+      osc.connect(gain);gain.connect(audioCtx.destination);
+      osc.type='square';osc.frequency.value=notes[i];
+      gain.gain.setValueAtTime(0.06,audioCtx.currentTime+i*0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+i*0.12+0.1);
+      osc.start(audioCtx.currentTime+i*0.12);osc.stop(audioCtx.currentTime+i*0.12+0.1);
+    }
+  }catch(e){}
+}
 function hitPlayer(){
   var wl=gw(G.score);
   if(wl>1){
@@ -218,7 +244,7 @@ function draw(){
     ctx.fillStyle='#fff';ctx.font='bold '+fs+'px Microsoft YaHei';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText('🚀 星空大战',c.width/2,c.height*0.22);
     ctx.font=(fs*0.4)+'px Microsoft YaHei';ctx.fillStyle='#8895b0';
-    ctx.fillText('10关闯关 · 分数递增 · Boss战 · 武器升级',c.width/2,c.height*0.33);
+    ctx.fillText('10关闯关 · 击杀20个小兵过关 · Boss战 · 武器升级',c.width/2,c.height*0.33);
     ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.35)+'px Microsoft YaHei';
     ctx.fillText('触屏滑动控制 · 按住开火',c.width/2,c.height*0.44);
     ctx.fillStyle='#f5a623';ctx.font=(fs*0.3)+'px Microsoft YaHei';
@@ -298,7 +324,7 @@ function draw(){
   var wl=gw(G.score),wc=gwc(wl);
   ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,c.width,28);
   ctx.fillStyle='#fff';ctx.font='13px Microsoft YaHei';ctx.textAlign='left';
-  ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+wc.l+' 第'+G.level+'关 (本关打够200分过关)',10,20);
+  ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+wc.l+' 第'+G.level+'关 (击杀 '+killCount+'/'+glc(G.level).sm*3+' 个敌人过关)',10,20);
   // Back to menu button
   ctx.textAlign='right';
   ctx.fillStyle='rgba(74,124,247,.2)';ctx.fillRect(c.width-70,4,64,22);
