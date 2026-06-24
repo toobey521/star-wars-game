@@ -70,7 +70,6 @@ var player={x:c.width/2,y:c.height-80,w:40,h:40,cd:0};
 var bullets=[],enemies=[],ebullets=[],particles=[],boss=null;
 var stars=[];
 for(var i=0;i<100;i++)stars.push({x:Math.random()*c.width,y:Math.random()*c.height,sz:Math.random()*2+0.5,sp:Math.random()*1.2+0.3});
-var levelStartScore=0; // score at level start, for level clear check
 
 function rc(a,b){return a.x-a.w/2<b.x+b.w/2&&a.x+a.w/2>b.x-b.w/2&&a.y-a.h/2<b.y+b.h/2&&a.y+a.h/2>b.y-b.h/2;}
 function se(){var cfg=glc(G.level);if(enemies.length<cfg.sm)enemies.push({x:Math.random()*(c.width-60)+30,y:-30,w:30,h:30,hp:1,sp:cfg.sp+Math.random()*0.5,ft:Math.floor(Math.random()*cfg.fr)});}
@@ -78,8 +77,8 @@ function sb(){var cfg=glc(G.level);boss={x:c.width/2,y:-60,w:80,h:60,hp:cfg.bh,m
 function ap(x,y,col,n){for(var i=0;i<n;i++){var a=Math.random()*6.28,s=Math.random()*3+1;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:30+Math.random()*20,ml:50,col,sz:Math.random()*4+2});}}
 
 function il(l){
-  G.level=l;bullets=[];enemies=[];ebullets=[];particles=[];boss=null;
-  levelStartScore=G.score; // record score at level start
+  G.level=l;G.score=0; // 每关分数清零
+  bullets=[];enemies=[];ebullets=[];particles=[];boss=null;
   player.x=G.mx;player.y=Math.min(G.my,c.height-30);
   var cfg=glc(l);
   for(var i=0;i<Math.min(cfg.ba?2:3,cfg.sm);i++)se();
@@ -117,8 +116,7 @@ function update(){
   // Boss level: spawn boss when ready
   if(cfg.ba&&!boss&&enemies.length===0&&G.frame>120)sb();
   // After boss dies, respawn enemies if still need points
-  var levelEarned=G.score-levelStartScore;
-  if(cfg.ba&&!boss&&levelEarned<200){
+  if(cfg.ba&&!boss&&G.score<200){
     if(G.frame%60===0&&enemies.length<cfg.sm)se();
   }
   
@@ -181,17 +179,15 @@ function update(){
   for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1);}
   
   // Win / Level clear: earn 200 points within each level
-  var levelEarned=G.score-levelStartScore;
-  if(G.level===G.maxLevel&&!boss&&enemies.length===0&&G.frame>180&&levelEarned>=200){G.state='win';return;}
+  if(G.level===G.maxLevel&&!boss&&enemies.length===0&&G.frame>180&&G.score>=200){G.state='win';return;}
   if(!cfg.ba){
-    if(levelEarned>=200&&enemies.length===0&&G.frame>120){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+    if(G.score>=200&&enemies.length===0&&G.frame>120){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
   }else{
-    if(!boss&&enemies.length===0&&G.frame>180&&levelEarned>=200){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+    if(!boss&&enemies.length===0&&G.frame>180&&G.score>=200){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
   }
 }
 
-// ===== Levels Config (keep sc for reference but not used for clear check) =====
-// ===== Hit Player =====
+// ===== Hit Player ======
 function hitPlayer(){
   var wl=gw(G.score);
   if(wl>1){
@@ -219,9 +215,34 @@ function draw(){
     ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.35)+'px Microsoft YaHei';
     ctx.fillText('触屏滑动控制 · 按住开火',c.width/2,c.height*0.44);
     ctx.fillStyle='#f5a623';ctx.font=(fs*0.3)+'px Microsoft YaHei';
-    ctx.fillText('⚡ 被击中武器会降级，小心操作！',c.width/2,c.height*0.53);
-    ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.35)+'px Microsoft YaHei';
-    ctx.fillText('点击/触屏开始游戏',c.width/2,c.height*0.66);
+    ctx.fillText('⚡ 被击中武器会降级，小心操作！',c.width/2,c.height*0.51);
+    // Level selection grid
+    ctx.textBaseline='middle';
+    var gridY=c.height*0.56,gridH=c.height*0.32,btnW=c.width*0.085,btnH=gridH*0.42,gap=c.width*0.005;
+    var gridW=btnW*10+gap*9;
+    var startX=(c.width-gridW)/2;
+    var levelNames=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩'];
+    ctx.textAlign='center';
+    for(var i=0;i<10;i++){
+      var bx=startX+i*(btnW+gap),by=gridY;
+      var col=i<5?'#4a7cf7':'#8e44ad';
+      ctx.fillStyle='rgba(0,0,0,.4)';
+      ctx.fillRect(bx-2,by-2,btnW+4,btnH+4);
+      ctx.fillStyle=col;
+      ctx.fillRect(bx,by,btnW,btnH);
+      ctx.fillStyle='#fff';ctx.font='bold '+(fs*0.2)+'px Microsoft YaHei';
+      ctx.fillText('第'+(i+1)+'关',bx+btnW/2,by+btnH*0.35);
+      ctx.font=(fs*0.15)+'px Microsoft YaHei';
+      ctx.fillStyle='rgba(255,255,255,.7)';
+      ctx.fillText(levelNames[i],bx+btnW/2,by+btnH*0.75);
+      // Boss badge
+      if(i+1===5||i+1===8||i+1===10){
+        ctx.fillStyle='rgba(231,76,60,.8)';ctx.font='bold '+(fs*0.13)+'px Microsoft YaHei';
+        ctx.fillText('🐉',bx+btnW-12,by+8);
+      }
+    }
+    ctx.fillStyle='#666';ctx.font=(fs*0.18)+'px Microsoft YaHei';ctx.textAlign='center';
+    ctx.fillText('点击上方关卡直接挑战 | 点击空白处从第1关开始',c.width/2,c.height*0.91);
     // Compliance notice - prominent
     ctx.textBaseline='bottom';
     ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(c.width*0.05,c.height-66,c.width*0.9,56);
@@ -450,8 +471,24 @@ function gp(e){
 }
 
 function hd(e){e.preventDefault();var p=gp(e);G.mx=p.x;G.my=p.y;
-  if(G.state==='menu'||G.state==='gameOver'||G.state==='win'){G.score=0;G.lives=99;G.frame=0;il(1);return;}
+  if(G.state==='gameOver'||G.state==='win'){G.score=0;G.lives=99;G.frame=0;il(1);return;}
   if(G.state==='levelClear'){il(G.level+1);return;}
+  if(G.state==='menu'){
+    // Check if clicking on a level button
+    var rect=c.getBoundingClientRect();
+    var cx=(e.clientX||(e.touches&&e.touches[0].clientX))-rect.left;
+    var cy=(e.clientY||(e.touches&&e.touches[0].clientY))-rect.top;
+    var rx=cx/rect.width,ry=cy/rect.height;
+    if(ry>0.52&&ry<0.90&&rx>0.05&&rx<0.95){
+      var btnX=Math.floor((rx-0.05)/0.09);
+      var btnY=Math.floor((ry-0.52)/0.09);
+      var lvl=btnY*10+btnX+1;
+      if(lvl>=1&&lvl<=10){G.score=0;G.lives=99;G.frame=0;il(lvl);return;}
+    }
+    // Click elsewhere = start from level 1
+    G.score=0;G.lives=99;G.frame=0;il(1);
+    return;
+  }
   if(G.state==='playing')G.clicked=true;
 }
 function hm(e){e.preventDefault();var p=gp(e);G.mx=p.x;G.my=p.y;}
