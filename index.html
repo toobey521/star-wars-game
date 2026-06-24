@@ -96,9 +96,14 @@ function update(){
     if(boss&&rc(bullets[i],boss)){boss.hp--;boss.hf=8;ap(bullets[i].x,bullets[i].y,'#e74c3c',5);bullets.splice(i,1);G.score+=5;if(boss.hp<=0){ap(boss.x,boss.y,'#e74c3c',40);boss=null;G.score+=50;}continue;}
   }
   
-  if(!cfg.ba){if(G.frame%cfg.sr===0&&enemies.length<cfg.sm)se();}
-  else{if(G.frame%(cfg.sr*2)===0&&enemies.length<cfg.sm)se();}
+  // Normal enemy spawning
+  if(G.frame%cfg.sr===0&&enemies.length<cfg.sm)se();
+  // Boss level: spawn boss when ready
   if(cfg.ba&&!boss&&enemies.length===0&&G.frame>120)sb();
+  // After boss dies, respawn enemies if still need points
+  if(cfg.ba&&!boss&&G.score<200){
+    if(G.frame%60===0&&enemies.length<cfg.sm)se();
+  }
   
   for(var i=enemies.length-1;i>=0;i--){
     var e=enemies[i];e.y+=e.sp;
