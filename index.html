@@ -70,6 +70,7 @@ var player={x:c.width/2,y:c.height-80,w:40,h:40,cd:0};
 var bullets=[],enemies=[],ebullets=[],particles=[],boss=null;
 var stars=[];
 for(var i=0;i<100;i++)stars.push({x:Math.random()*c.width,y:Math.random()*c.height,sz:Math.random()*2+0.5,sp:Math.random()*1.2+0.3});
+var levelStartScore=0; // score at level start, for level clear check
 
 function rc(a,b){return a.x-a.w/2<b.x+b.w/2&&a.x+a.w/2>b.x-b.w/2&&a.y-a.h/2<b.y+b.h/2&&a.y+a.h/2>b.y-b.h/2;}
 function se(){var cfg=glc(G.level);if(enemies.length<cfg.sm)enemies.push({x:Math.random()*(c.width-60)+30,y:-30,w:30,h:30,hp:1,sp:cfg.sp+Math.random()*0.5,ft:Math.floor(Math.random()*cfg.fr)});}
@@ -78,6 +79,7 @@ function ap(x,y,col,n){for(var i=0;i<n;i++){var a=Math.random()*6.28,s=Math.rand
 
 function il(l){
   G.level=l;bullets=[];enemies=[];ebullets=[];particles=[];boss=null;
+  levelStartScore=G.score; // record score at level start
   player.x=G.mx;player.y=Math.min(G.my,c.height-30);
   var cfg=glc(l);
   for(var i=0;i<Math.min(cfg.ba?2:3,cfg.sm);i++)se();
@@ -115,7 +117,8 @@ function update(){
   // Boss level: spawn boss when ready
   if(cfg.ba&&!boss&&enemies.length===0&&G.frame>120)sb();
   // After boss dies, respawn enemies if still need points
-  if(cfg.ba&&!boss&&G.score<cfg.sc){
+  var levelEarned=G.score-levelStartScore;
+  if(cfg.ba&&!boss&&levelEarned<200){
     if(G.frame%60===0&&enemies.length<cfg.sm)se();
   }
   
@@ -177,22 +180,23 @@ function update(){
   
   for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1);}
   
-  // Win / Level clear: each level has its own score requirement
-  if(G.level===G.maxLevel&&!boss&&enemies.length===0&&G.frame>180&&G.score>=glc(G.level).sc){G.state='win';return;}
+  // Win / Level clear: earn 200 points within each level
+  var levelEarned=G.score-levelStartScore;
+  if(G.level===G.maxLevel&&!boss&&enemies.length===0&&G.frame>180&&levelEarned>=200){G.state='win';return;}
   if(!cfg.ba){
-    if(G.score>=cfg.sc&&enemies.length===0&&G.frame>120){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+    if(levelEarned>=200&&enemies.length===0&&G.frame>120){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
   }else{
-    if(!boss&&enemies.length===0&&G.frame>180&&G.score>=cfg.sc){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+    if(!boss&&enemies.length===0&&G.frame>180&&levelEarned>=200){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
   }
 }
 
-// Hit player: if weapon > 1, downgrade only. If weapon = 1, lose a life.
+// ===== Levels Config (keep sc for reference but not used for clear check) =====
+// ===== Hit Player =====
 function hitPlayer(){
   var wl=gw(G.score);
   if(wl>1){
     G.score=Math.max(0,(wl-2)*10);
     ap(player.x,player.y,'#ff6b6b',8);
-    // Ensure weapon doesn't go below level 1
     if(gw(G.score)<1)G.score=0;
   }else{
     G.lives--;
@@ -266,7 +270,7 @@ function draw(){
   var wl=gw(G.score),wc=gwc(wl);
   ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,c.width,28);
   ctx.fillStyle='#fff';ctx.font='13px Microsoft YaHei';ctx.textAlign='left';
-  ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+wc.l+' 第'+G.level+'关 (需'+glc(G.level).sc+'分)',10,20);
+  ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+wc.l+' 第'+G.level+'关 (本关打够200分过关)',10,20);
   
   // Player
   var ps=Math.min(c.width/22,20);
