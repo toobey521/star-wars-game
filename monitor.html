@@ -92,9 +92,9 @@ var name = '';
 var autoTimer = 0;
 var autoInterval = 5000; // 5秒
 var lastSignal = ''; // 上次信号，用于变化提醒
-
 function setMarket(m, defaultCode) {
   market = m;
+  code = defaultCode;
   document.querySelectorAll('.market-tab button').forEach(function(b){b.classList.remove('active')});
   document.querySelector('.market-tab button[data-market="'+m+'"]').classList.add('active');
   var badge = {'a':'🇨🇳','us':'🇺🇸','gold':'🥇'};
@@ -103,7 +103,27 @@ function setMarket(m, defaultCode) {
   document.getElementById('helpText').innerHTML = m==='a'?'A股: 6位代码 ｜ 美股: 字母代码(如 aapl) ｜ 伦敦金现: AUUSD0'
     : m==='us'?'美股: 字母代码(如 aapl,tsla,msft) ｜ A股: 6位 ｜ 伦敦金现: AUUSD0'
     : '伦敦金现: AUUSD0 或 gold ｜ 美股: 字母代码 ｜ A股: 6位';
-  search();
+  // Start data fetch immediately without going through search auto-detect
+  fetchAndRender();
+}
+
+async function fetchAndRender() {
+  document.getElementById('resultArea').innerHTML='<div class="loading">🔄 加载中...</div>';
+  try{
+    var data=await fetchData();
+    var kline=await fetchKlineData();
+    name=data&&data.name?data.name:code.toUpperCase();
+    var result=analyze(data,kline);
+    render(result);
+    var now=new Date();
+    document.getElementById('statusBar').innerHTML='<span class="dot '+(result.score>=62?'red':'green')+'\"></span>'+name+' | '+now.toLocaleTimeString('zh-CN')+' | 每5秒刷新';
+    clearTimeout(autoTimer);
+    autoTimer=setTimeout(fetchAndRender,autoInterval);
+  }catch(e){
+    document.getElementById('resultArea').innerHTML='<div class="error">❌ 获取失败: '+e.message+'</div>';
+    clearTimeout(autoTimer);
+    autoTimer=setTimeout(fetchAndRender,5000);
+  }
 }
 
 // ===== API =====
@@ -475,32 +495,16 @@ async function search(){
   var input=document.getElementById('codeInput').value.trim();
   if(!input)return;
   
-  // Auto-detect market from input
-  if(input.toLowerCase()==='gold'||input.toLowerCase()==='auusd0'||input.toLowerCase()==='xau'||input.toLowerCase()==='伦敦金现'){setMarket('gold','AUUSD0');return;}
-  if(/^[a-zA-Z]{1,5}$/.test(input)&&!/^\d{6}$/.test(input)){setMarket('us',input.toLowerCase());return;}
+  // 自动识别市场（仅当输入框内容改变时，不是来自按钮点击）
+  var inputMarket = market;
+  if(input.toLowerCase()==='gold'||input.toLowerCase()==='auusd0'||input.toLowerCase()==='xau'||input.toLowerCase()==='伦敦金现'){if(market!=='gold'){setMarket('gold','AUUSD0');}else{code='AUUSD0';}return;}
+  if(/^[a-zA-Z]{1,5}$/.test(input)&&!/^\d{6}$/.test(input)){if(market!=='us'){setMarket('us',input.toLowerCase());}else{code=input.toLowerCase();}return;}
   
-  var m={'a':'a'};
   if(market==='a')code=input.replace(/[^0-9]/g,'').slice(0,6);
   else if(market==='us')code=input.replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
-  else code='XAUUSD';
+  else if(market==='gold')code='AUUSD0';
   
-  document.getElementById('resultArea').innerHTML='<div class="loading">🔄 加载中...</div>';
-  
-  try{
-    var data=await fetchData();
-    var kline=await fetchKlineData();
-    name=data&&data.name?data.name:code.toUpperCase();
-    var result=analyze(data,kline);
-    render(result);
-    var now=new Date();
-    document.getElementById('statusBar').innerHTML='<span class="dot '+(result.score>=62?'red':'green')+'"></span>'+name+' | '+now.toLocaleTimeString('zh-CN')+' | 每5秒刷新';
-    clearTimeout(autoTimer);
-    autoTimer=setTimeout(search,autoInterval);
-  }catch(e){
-    document.getElementById('resultArea').innerHTML='<div class="error">❌ 获取失败: '+e.message+'</div>';
-    clearTimeout(autoTimer);
-    autoTimer=setTimeout(search,5000);
-  }
+  fetchAndRender();
 }
 
 // ===== 自动启动 =====
