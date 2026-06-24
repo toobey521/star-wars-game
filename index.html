@@ -148,7 +148,7 @@ function update(){
   if(!cfg.ba){
     if(G.score>=200&&enemies.length===0&&G.frame>120){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
   }else{
-    if(!boss&&enemies.length===0&&G.frame>180){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+    if(!boss&&enemies.length===0&&G.frame>180&&G.score>=200){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
   }
 }
 
@@ -169,13 +169,14 @@ function draw(){
     ctx.fillText('⚡ 被击中武器会降级，小心操作！',c.width/2,c.height*0.53);
     ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.35)+'px Microsoft YaHei';
     ctx.fillText('点击/触屏开始游戏',c.width/2,c.height*0.66);
-    // Compliance notice
+    // Compliance notice - prominent
     ctx.textBaseline='bottom';
-    ctx.fillStyle='rgba(255,100,100,.35)';ctx.font='bold '+(fs*0.2)+'px Microsoft YaHei';
-    ctx.fillText('【健康游戏忠告】',c.width/2,c.height-14);
-    ctx.fillStyle='rgba(255,255,255,.2)';ctx.font=(fs*0.17)+'px Microsoft YaHei';
-    ctx.fillText('抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。',c.width/2,c.height-14-(fs*0.22));
-    ctx.fillText('适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。',c.width/2,c.height-14-(fs*0.44));
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(c.width*0.05,c.height-66,c.width*0.9,56);
+    ctx.fillStyle='rgba(255,80,80,.5)';ctx.font='bold '+(fs*0.28)+'px Microsoft YaHei';ctx.textAlign='center';
+    ctx.fillText('【健康游戏忠告】',c.width/2,c.height-24);
+    ctx.fillStyle='rgba(255,255,255,.35)';ctx.font=(fs*0.22)+'px Microsoft YaHei';
+    ctx.fillText('抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。',c.width/2,c.height-46);
+    ctx.fillText('适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。',c.width/2,c.height-68);
     return;
   }
   if(G.state==='gameOver'){
