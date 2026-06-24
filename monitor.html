@@ -212,7 +212,8 @@ function render(r){
   var h='<div class="price-card"><div class="price-row"><div><div style="font-size:13px;color:#8895b0;margin-bottom:2px">'+N+' ('+C.toUpperCase()+')</div>'+
     '<div class="price '+(M==='gold'?'gold':r.changePct>=0?'up':'down')+'">'+(M==='gold'?'$':'')+r.price.toFixed(2)+'</div></div>'+
     '<div class="change '+(r.changePct>=0?'up':'down')+'">'+(r.changePct>0?'+':'')+r.changePct.toFixed(2)+'%<br><span style="font-size:11px;opacity:.7">'+(r.change>0?'+':'')+r.change.toFixed(2)+'</span></div></div>'+
-    '<div class="meta"><span>开 '+r.open.toFixed(2)+'</span><span>高 '+r.high.toFixed(2)+'</span><span>低 '+r.low.toFixed(2)+'</span></div></div>'+
+    '<div class="meta"><span>开 '+r.open.toFixed(2)+'</span><span>高 '+r.high.toFixed(2)+'</span><span>低 '+r.low.toFixed(2)+'</span>'+
+    (M==='gold'?'<span>≈'+(r.price*7.25/31.1035).toFixed(2)+'元/克</span>':'')+'</div></div>'+
     '<div class="signal-card"><div class="sig '+r.sigClass+'">'+r.signal+'</div><div class="score-bar"><div class="score-fill" style="width:'+r.score+'%;background:'+(r.score>=62?'#e74c3c':r.score>=45?'#f5a623':'#27ae60')+'"></div></div>'+
     '<div class="desc">评分 '+r.score+'/100 · RSI('+(r.rsi6>100?'>100':r.rsi6.toFixed(0))+') · KDJ('+r.kdj.J+')</div></div>'+
     '<div class="grid"><div class="item"><div class="val '+(r.volRatio>1.2?'up':'down')+'">'+r.volRatio.toFixed(2)+'</div><div class="lbl">量比</div></div>'+
