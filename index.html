@@ -76,8 +76,15 @@ function se(){var cfg=glc(G.level);if(enemies.length<cfg.sm)enemies.push({x:Math
 function sb(){var cfg=glc(G.level);boss={x:c.width/2,y:-60,w:80,h:60,hp:cfg.bh,mh:cfg.bh,sp:1.2,dir:1,ft:0,hf:0};}
 function ap(x,y,col,n){for(var i=0;i<n;i++){var a=Math.random()*6.28,s=Math.random()*3+1;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:30+Math.random()*20,ml:50,col,sz:Math.random()*4+2});}}
 
-function il(l){
-  G.level=l;G.score=0; // 每关分数清零
+function il(l, preserveWpn){
+  if(!preserveWpn){
+    G.level=l;G.score=0;
+  }else{
+    // Carry over weapon level to next level
+    var wl=gw(G.score);
+    G.level=l;
+    G.score=Math.max(0,(wl-1)*10);
+  }
   bullets=[];enemies=[];ebullets=[];particles=[];boss=null;
   player.x=G.mx;player.y=Math.min(G.my,c.height-30);
   var cfg=glc(l);
@@ -472,18 +479,18 @@ function gp(e){
 
 function hd(e){e.preventDefault();var p=gp(e);G.mx=p.x;G.my=p.y;
   if(G.state==='gameOver'||G.state==='win'){G.score=0;G.lives=99;G.frame=0;il(1);return;}
-  if(G.state==='levelClear'){il(G.level+1);return;}
+  if(G.state==='levelClear'){il(G.level+1,true);return;}
   if(G.state==='menu'){
-    // Check if clicking on a level button
-    var rect=c.getBoundingClientRect();
-    var cx=(e.clientX||(e.touches&&e.touches[0].clientX))-rect.left;
-    var cy=(e.clientY||(e.touches&&e.touches[0].clientY))-rect.top;
-    var rx=cx/rect.width,ry=cy/rect.height;
-    if(ry>0.52&&ry<0.90&&rx>0.05&&rx<0.95){
-      var btnX=Math.floor((rx-0.05)/0.09);
-      var btnY=Math.floor((ry-0.52)/0.09);
-      var lvl=btnY*10+btnX+1;
-      if(lvl>=1&&lvl<=10){G.score=0;G.lives=99;G.frame=0;il(lvl);return;}
+    // Check if clicking on a level button (canvas coords)
+    var gw=c.width,gh=c.height;
+    var gridY=gh*0.56,btnW=gw*0.085,btnH=gh*0.134,gap=gw*0.005;
+    var gridW=btnW*10+gap*9,startX=(gw-gridW)/2;
+    for(var i=0;i<10;i++){
+      var bx=startX+i*(btnW+gap);
+      if(p.x>=bx&&p.x<=bx+btnW&&p.y>=gridY&&p.y<=gridY+btnH){
+        G.score=0;G.lives=99;G.frame=0;il(i+1);
+        return;
+      }
     }
     // Click elsewhere = start from level 1
     G.score=0;G.lives=99;G.frame=0;il(1);
