@@ -299,6 +299,12 @@ function draw(){
   ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,c.width,28);
   ctx.fillStyle='#fff';ctx.font='13px Microsoft YaHei';ctx.textAlign='left';
   ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+wc.l+' 第'+G.level+'关 (本关打够200分过关)',10,20);
+  // Back to menu button
+  ctx.textAlign='right';
+  ctx.fillStyle='rgba(74,124,247,.2)';ctx.fillRect(c.width-70,4,64,22);
+  ctx.strokeStyle='rgba(74,124,247,.4)';ctx.lineWidth=0.5;ctx.strokeRect(c.width-70,4,64,22);
+  ctx.fillStyle='rgba(74,124,247,.8)';ctx.font='12px Microsoft YaHei';
+  ctx.fillText('🏠 主页',c.width-8,20);
   
   // Player
   var ps=Math.min(c.width/22,20);
@@ -496,7 +502,14 @@ function hd(e){e.preventDefault();var p=gp(e);G.mx=p.x;G.my=p.y;
     G.score=0;G.lives=99;G.frame=0;il(1);
     return;
   }
-  if(G.state==='playing')G.clicked=true;
+  if(G.state==='playing'){
+    // Check if clicking the "主页" button (top right corner)
+    if(p.x>=c.width-70&&p.x<=c.width-6&&p.y>=4&&p.y<=26){
+      G.state='menu';bullets=[];enemies=[];ebullets=[];particles=[];boss=null;
+      return;
+    }
+    G.clicked=true;
+  }
 }
 function hm(e){e.preventDefault();var p=gp(e);G.mx=p.x;G.my=p.y;}
 function hu(e){e.preventDefault();G.clicked=false;}
