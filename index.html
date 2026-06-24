@@ -50,7 +50,21 @@ resize();window.addEventListener('resize',resize);
 var G={state:'menu',level:1,score:0,lives:99,maxLevel:10,mx:c.width/2,my:c.height-80,clicked:false,frame:0};
 function gw(l){return Math.floor(l/10)+1}
 function gwc(l){var a=[{c:1,s:0,d:10,sp:8,l:'单发'},{c:2,s:7,d:10,sp:8,l:'双发'},{c:3,s:9,d:10,sp:9,l:'三发'},{c:3,s:11,d:7,sp:10,l:'三发速射'},{c:5,s:13,d:9,sp:10,l:'散弹'},{c:5,s:15,d:6,sp:11,l:'散弹速射'},{c:7,s:17,d:7,sp:12,l:'烈焰'},{c:7,s:19,d:5,sp:13,l:'烈焰速射'},{c:9,s:21,d:5,sp:14,l:'星辰'},{c:11,s:23,d:4,sp:15,l:'太阳耀斑'}];return a[Math.min(l-1,a.length-1)];}
-function glc(l){var a=[{},{e:6,sp:1.0,fr:150,sr:150,sm:5,bh:0,sc:200,ba:0,la:'初入星空'},{e:8,sp:1.3,fr:130,sr:130,sm:6,bh:0,sc:200,ba:0,la:'陨石带'},{e:10,sp:1.6,fr:110,sr:110,sm:7,bh:0,sc:200,ba:0,la:'暗夜巡逻'},{e:10,sp:1.9,fr:95,sr:95,sm:8,bh:0,sc:200,ba:0,la:'敌方前哨'},{e:12,sp:2.1,fr:85,sr:85,sm:9,bh:6,sc:200,ba:1,la:'精英来袭'},{e:12,sp:2.4,fr:75,sr:75,sm:10,bh:0,sc:200,ba:0,la:'穿越火线'},{e:14,sp:2.6,fr:68,sr:68,sm:11,bh:0,sc:200,ba:0,la:'星际风暴'},{e:14,sp:2.9,fr:60,sr:60,sm:12,bh:8,sc:200,ba:1,la:'死亡星域'},{e:16,sp:3.1,fr:52,sr:52,sm:13,bh:0,sc:200,ba:0,la:'终极挑战'},{e:12,sp:3.5,fr:45,sr:45,sm:15,bh:30,sc:200,ba:1,la:'⭐最终之战'}];return a[l]||a[1];}
+function glc(l){
+  var a=[{},
+    {e:6,sp:1.0,fr:150,sr:150,sm:5,bh:0,sc:100,ba:0,la:'初入星空'},
+    {e:8,sp:1.3,fr:130,sr:130,sm:6,bh:0,sc:200,ba:0,la:'陨石带'},
+    {e:10,sp:1.6,fr:110,sr:110,sm:7,bh:0,sc:300,ba:0,la:'暗夜巡逻'},
+    {e:10,sp:1.9,fr:95,sr:95,sm:8,bh:0,sc:400,ba:0,la:'敌方前哨'},
+    {e:12,sp:2.1,fr:85,sr:85,sm:9,bh:6,sc:500,ba:1,la:'精英来袭'},
+    {e:12,sp:2.4,fr:75,sr:75,sm:10,bh:0,sc:600,ba:0,la:'穿越火线'},
+    {e:14,sp:2.6,fr:68,sr:68,sm:11,bh:0,sc:700,ba:0,la:'星际风暴'},
+    {e:14,sp:2.9,fr:60,sr:60,sm:12,bh:8,sc:800,ba:1,la:'死亡星域'},
+    {e:16,sp:3.1,fr:52,sr:52,sm:13,bh:0,sc:900,ba:0,la:'终极挑战'},
+    {e:12,sp:3.5,fr:45,sr:45,sm:15,bh:30,sc:1000,ba:1,la:'⭐最终之战'}
+  ];
+  return a[l]||a[1];
+}
 
 var player={x:c.width/2,y:c.height-80,w:40,h:40,cd:0};
 var bullets=[],enemies=[],ebullets=[],particles=[],boss=null;
@@ -101,7 +115,7 @@ function update(){
   // Boss level: spawn boss when ready
   if(cfg.ba&&!boss&&enemies.length===0&&G.frame>120)sb();
   // After boss dies, respawn enemies if still need points
-  if(cfg.ba&&!boss&&G.score<200){
+  if(cfg.ba&&!boss&&G.score<cfg.sc){
     if(G.frame%60===0&&enemies.length<cfg.sm)se();
   }
   
@@ -111,13 +125,16 @@ function update(){
     if(e.y>c.height+40){enemies.splice(i,1);continue;}
     if(rc(e,player)){
       ap(e.x,e.y,'#f5a623',15);enemies.splice(i,1);
-      var wl=gw(G.score);
-      if(wl>1){
-        G.score=Math.max(0,(wl-2)*10);
-        ap(player.x,player.y,'#ff6b6b',8);
-      }
-      G.lives--;
-      if(G.lives<=0)G.state='gameOver';
+      hitPlayer();
+    }
+  }
+  
+  // Enemy passes defense line (bottom of screen)
+  for(var i=enemies.length-1;i>=0;i--){
+    var e=enemies[i];
+    if(e.y>c.height+20){
+      enemies.splice(i,1);
+      hitPlayer();
     }
   }
   
@@ -126,20 +143,32 @@ function update(){
     if(eb.y>c.height+20){ebullets.splice(i,1);continue;}
     if(rc(eb,player)){
       ap(player.x,player.y,'#4a7cf7',10);ebullets.splice(i,1);
-      var wl2=gw(G.score);
-      if(wl2>1){
-        G.score=Math.max(0,(wl2-2)*10);
-        ap(player.x,player.y,'#ff6b6b',8);
-      }
-      G.lives--;
-      if(G.lives<=0)G.state='gameOver';
+      hitPlayer();
     }
   }
   
   if(boss){
-    boss.x+=boss.sp*boss.dir;
-    if(boss.x>c.width-60||boss.x<60)boss.dir*=-1;
-    if(boss.y<60)boss.y+=0.5;
+    // Boss movement varies by level
+    if(G.level===5){
+      // Level 5: sine wave pattern
+      boss.x+=boss.sp*boss.dir;
+      if(boss.x>c.width-60||boss.x<60)boss.dir*=-1;
+      boss.y+=Math.sin(G.frame*0.03)*0.8;
+      if(boss.y<40)boss.y=40;if(boss.y>120)boss.y=120;
+    } else if(G.level===8){
+      // Level 8: fast dash + pause
+      if(G.frame%120<80){
+        boss.x+=boss.sp*2.5*boss.dir;
+        if(boss.x>c.width-60||boss.x<60)boss.dir*=-1;
+      }
+      if(boss.y<60)boss.y+=0.8;
+    } else {
+      // Level 10: complex zigzag
+      boss.x+=boss.sp*1.8*boss.dir;
+      if(boss.x>c.width-60||boss.x<60)boss.dir*=-1;
+      boss.y+=Math.sin(G.frame*0.05)*1.2;
+      if(boss.y<30)boss.y=30;if(boss.y>130)boss.y=130;
+    }
     if(boss.hf>0)boss.hf--;
     boss.ft--;
     if(boss.ft<=0){for(var a=-1;a<=1;a++)ebullets.push({x:boss.x+a*20,y:boss.y+30,w:5,h:8,sp:3.5});boss.ft=40;}
@@ -148,12 +177,25 @@ function update(){
   
   for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1);}
   
-  // Win / Level clear: all levels need 200 points
-  if(G.level===G.maxLevel&&!boss&&enemies.length===0&&G.frame>180){G.state='win';return;}
+  // Win / Level clear: each level has its own score requirement
+  if(G.level===G.maxLevel&&!boss&&enemies.length===0&&G.frame>180&&G.score>=glc(G.level).sc){G.state='win';return;}
   if(!cfg.ba){
-    if(G.score>=200&&enemies.length===0&&G.frame>120){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+    if(G.score>=cfg.sc&&enemies.length===0&&G.frame>120){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
   }else{
-    if(!boss&&enemies.length===0&&G.frame>180&&G.score>=200){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+    if(!boss&&enemies.length===0&&G.frame>180&&G.score>=cfg.sc){G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+  }
+}
+
+// Hit player: if weapon > 1, downgrade only. If weapon = 1, lose a life.
+function hitPlayer(){
+  var wl=gw(G.score);
+  if(wl>1){
+    G.score=Math.max(0,(wl-2)*10);
+    ap(player.x,player.y,'#ff6b6b',8);
+  }else{
+    G.lives--;
+    ap(player.x,player.y,'#e74c3c',12);
+    if(G.lives<=0)G.state='gameOver';
   }
 }
 
@@ -222,7 +264,7 @@ function draw(){
   var wl=gw(G.score),wc=gwc(wl);
   ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,c.width,28);
   ctx.fillStyle='#fff';ctx.font='13px Microsoft YaHei';ctx.textAlign='left';
-  ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+wc.l+' 第'+G.level+'关 (需200分)',10,20);
+  ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+wc.l+' 第'+G.level+'关 (需'+glc(G.level).sc+'分)',10,20);
   
   // Player
   var ps=Math.min(c.width/22,20);
