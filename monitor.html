@@ -90,7 +90,7 @@ async function load(){
     var r=analyze(d,kl);
     render(r);
     var now=new Date();
-    document.getElementById('statusBar').innerHTML='<span class="dot" style="background:'+(r.score>=62?'#e74c3c':'#27ae60')+'"></span>'+N+' | '+now.toLocaleTimeString('zh-CN')+' | 每5秒';
+    document.getElementById('statusBar').innerHTML='<span class="dot" style="background:'+(r.score>=62?'#e74c3c':'#27ae60')+'"></span>'+N+' | 新浪 '+(r.marketTime||'')+' | 本地 '+now.toLocaleTimeString('zh-CN');
     if(r.signal&&r.signal!==lastSig){if(lastSig)playSound(r.score);lastSig=r.signal;}
     clearTimeout(timer);timer=setTimeout(load,5000);
   }catch(e){
@@ -106,7 +106,7 @@ async function getA(c){
     var r=await fetch('https://hq.sinajs.cn/list='+p+c,{headers:{Referer:'https://finance.sina.com.cn'},signal:AbortSignal.timeout(5000)});
     var txt=await r.text(),m=txt.match(/"([^"]+)"/);
     if(m){var a=m[1].split(',');if(a.length>5&&pf(a[3])>0){
-      d={name:a[0],open:pf(a[1]),preClose:pf(a[2]),price:pf(a[3]),high:pf(a[4]),low:pf(a[5]),volume:parseInt(a[8])||0,amount:parseFloat(a[9])||0,volRatio:1};
+      d={name:a[0],open:pf(a[1]),preClose:pf(a[2]),price:pf(a[3]),high:pf(a[4]),low:pf(a[5]),volume:parseInt(a[8])||0,amount:parseFloat(a[9])||0,volRatio:1,marketTime:''};
       d.change=d.price-d.preClose;d.changePct=d.preClose>0?d.change/d.preClose*100:0;}}
   }catch(e){}
   try{
@@ -138,7 +138,7 @@ async function getUS(c){
         var p=pf(a[1]),pre=pf(a[8]),chg=pf(a[4]),chgPct=pf(a[2]);
         if(pre===0)pre=p-chg;
         return{name:a[0]||c.toUpperCase(),price:p,preClose:pre,change:chg,changePct:chgPct,
-          open:pf(a[5]),high:pf(a[6]),low:pf(a[7]),volume:parseInt(a[10])||0,volRatio:1};}}
+          open:pf(a[5]),high:pf(a[6]),low:pf(a[7]),volume:parseInt(a[10])||0,volRatio:1,marketTime:''};}}
   }catch(e){}
   return null;
 }
@@ -148,19 +148,18 @@ async function getGold(){
     var r=await fetch('https://hq.sinajs.cn/list=hf_XAU',{headers:{Referer:'https://finance.sina.com.cn'},signal:AbortSignal.timeout(5000)});
     var txt=await r.text(),m=txt.match(/"([^"]+)"/);
     if(m){var a=m[1].split(',');
-      // hf_XAU: [0]=现价 [1]=昨收 [2]=今开 [3]=? [4]=最高 [5]=最低 [13]=名称
       if(a.length>10&&pf(a[0])>0){
-        var p=pf(a[0]),pre=pf(a[1]); // 昨收在a[1]
+        var p=pf(a[0]),pre=pf(a[1]),marketTime=a[6]; // 新浪时间
         if(pre===0)pre=p*0.995;
         return{name:'伦敦金现 AUUSD0',price:p,preClose:pre,
           change:p-pre,changePct:pre>0?(p-pre)/pre*100:0,
           open:pf(a[2])||p*0.997,high:pf(a[4])||p*1.003,low:pf(a[5])||p*0.996,
-          volume:0,volRatio:1.2};}}
+          volume:0,volRatio:1.2,marketTime:marketTime};}} // 返回新浪时间
   }catch(e){}
   var b=4050,t=Date.now(),w1=Math.sin(t*0.000004)*18,w2=Math.sin(t*0.00005)*6,w3=((t%300000)/300000*12-6);
   var p=Math.round((b+w1+w2+w3)*100)/100,pre=Math.round((b+Math.sin((t-5000)*0.00005)*6+Math.sin((t-5000)*0.000004)*18)*100)/100;
   return{name:'伦敦金现 AUUSD0',price:p,preClose:pre,change:p-pre,changePct:pre>0?(p-pre)/pre*100:0,
-    open:Math.round((b-5)*100)/100,high:Math.round((p+10)*100)/100,low:Math.round((p-8)*100)/100,volume:120000,volRatio:1};
+    open:Math.round((b-5)*100)/100,high:Math.round((p+10)*100)/100,low:Math.round((p-8)*100)/100,volume:120000,volRatio:1,marketTime:''};
 }
 
 function rsi(c,p){if(c.length<p+1)return 50;var g=0,l=0;
@@ -206,7 +205,7 @@ function analyze(d,kl){
   if(sc>=72){sig='🔥 强烈加仓';cls='sBuy';}else if(sc>=62){sig='📈 建议加仓';cls='buy';}
   else if(sc>=45){sig='⏸️ 持有观望';cls='hold';}else if(sc>=35){sig='📉 建议减仓';cls='sell';}else{sig='⚠️ 强烈减仓';cls='sSell';}
   return{price:d.price,change:d.change,changePct:d.changePct,volRatio:d.volRatio||0,score:Math.round(sc),signal:sig,sigClass:cls,
-    rsi6:r6,kdj:k,macd:m,bollP:bp,open:d.open,high:d.high,low:d.low,preClose:d.preClose,turnoverRate:d.turnoverRate,signals:s};
+    rsi6:r6,kdj:k,macd:m,bollP:bp,open:d.open,high:d.high,low:d.low,preClose:d.preClose,turnoverRate:d.turnoverRate,signals:s,marketTime:d.marketTime||''};
 }
 
 function render(r){
