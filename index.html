@@ -29,7 +29,7 @@ canvas{display:block;width:100%;flex:1;touch-action:none;cursor:crosshair;backgr
 </div>
 <div class="hud">
   <span>⭐ <b id="score">0</b></span>
-  <span class="wpn" id="weapon">🔫 Lv.1 单发</span>
+  <span class="wpn" id="weapon">🔫 toobey</span>
   <span>❤️ <b id="lives">99</b></span>
 </div>
 <canvas id="c"></canvas>
@@ -49,7 +49,7 @@ resize();window.addEventListener('resize',resize);
 // ===== GAME STATE =====
 var G={state:'menu',level:1,score:0,lives:99,maxLevel:9,mx:c.width/2,my:c.height-80,clicked:false,frame:0};
 function gw(l){return Math.min(10,Math.floor(l/10)+1)}
-function gwc(l){var a=[{c:1,s:0,d:10,sp:8,l:'单发'},{c:2,s:7,d:10,sp:8,l:'双发'},{c:3,s:9,d:10,sp:9,l:'三发'},{c:3,s:11,d:7,sp:10,l:'三发速射'},{c:5,s:13,d:9,sp:10,l:'散弹'},{c:5,s:15,d:6,sp:11,l:'散弹速射'},{c:7,s:17,d:7,sp:12,l:'烈焰'},{c:7,s:19,d:5,sp:13,l:'烈焰速射'},{c:9,s:21,d:5,sp:14,l:'星辰'},{c:11,s:23,d:4,sp:15,l:'太阳耀斑'}];return a[Math.min(l-1,a.length-1)];}
+function gwc(l){var a=[{c:1,s:0,d:10,sp:8,l:'toobey'},{c:2,s:7,d:10,sp:8,l:'toobey'},{c:3,s:9,d:10,sp:9,l:'toobey'},{c:3,s:11,d:7,sp:10,l:'toobey'},{c:5,s:13,d:9,sp:10,l:'toobey'},{c:5,s:15,d:6,sp:11,l:'toobey'},{c:7,s:17,d:7,sp:12,l:'toobey'},{c:7,s:19,d:5,sp:13,l:'toobey'},{c:9,s:21,d:5,sp:14,l:'toobey'},{c:11,s:23,d:4,sp:15,l:'toobey'}];return a[Math.min(l-1,a.length-1)];}
 function glc(l){
   var a=[{},
     {e:6,sp:1.0,fr:150,sr:150,sm:5,bh:0,sc:100,ba:0,la:'初入星空'},
@@ -223,9 +223,8 @@ function celebrate(){
 function hitPlayer(){
   var wl=gw(G.score);
   if(wl>1){
-    G.score=Math.max(0,(wl-2)*10);
+    G.score=Math.max(G.score-10,0);
     ap(player.x,player.y,'#ff6b6b',8);
-    if(gw(G.score)<1)G.score=0;
   }else{
     G.lives--;
     ap(player.x,player.y,'#e74c3c',12);
@@ -251,11 +250,11 @@ function draw(){
     // Level selection grid
     ctx.textBaseline='middle';
     var gridY=c.height*0.56,gridH=c.height*0.32,btnW=c.width*0.085,btnH=gridH*0.42,gap=c.width*0.005;
-    var gridW=btnW*10+gap*9;
+    var gridW=btnW*9+gap*8;
     var startX=(c.width-gridW)/2;
-    var levelNames=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩'];
+    var levelNames=['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
     ctx.textAlign='center';
-    for(var i=0;i<10;i++){
+    for(var i=0;i<9;i++){
       var bx=startX+i*(btnW+gap),by=gridY;
       var col=i<5?'#4a7cf7':'#8e44ad';
       ctx.fillStyle='rgba(0,0,0,.4)';
@@ -268,7 +267,7 @@ function draw(){
       ctx.fillStyle='rgba(255,255,255,.7)';
       ctx.fillText(levelNames[i],bx+btnW/2,by+btnH*0.75);
       // Boss badge
-      if(i+1===5||i+1===8||i+1===10){
+      if(i+1===5||i+1===8){
         ctx.fillStyle='rgba(231,76,60,.8)';ctx.font='bold '+(fs*0.13)+'px Microsoft YaHei';
         ctx.fillText('🐉',bx+btnW-12,by+8);
       }
@@ -515,8 +514,8 @@ function hd(e){e.preventDefault();var p=gp(e);G.mx=p.x;G.my=p.y;
     // Check if clicking on a level button (canvas coords)
     var gw=c.width,gh=c.height;
     var gridY=gh*0.56,btnW=gw*0.085,btnH=gh*0.134,gap=gw*0.005;
-    var gridW=btnW*10+gap*9,startX=(gw-gridW)/2;
-    for(var i=0;i<10;i++){
+    var gridW=btnW*9+gap*8,startX=(gw-gridW)/2;
+    for(var i=0;i<9;i++){
       var bx=startX+i*(btnW+gap);
       if(p.x>=bx&&p.x<=bx+btnW&&p.y>=gridY&&p.y<=gridY+btnH){
         G.score=0;G.lives=99;G.frame=0;il(i+1);
