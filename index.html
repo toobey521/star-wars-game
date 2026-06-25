@@ -29,7 +29,7 @@ canvas{display:block;width:100%;flex:1;touch-action:none;cursor:crosshair;backgr
 </div>
 <div class="hud">
   <span>⭐ <b id="score">0</b></span>
-  <span class="wpn" id="weapon">🔫 toobey</span>
+  <span class="wpn" id="weapon">🔫 <span id="levelName">toobey</span></span>
   <span>❤️ <b id="lives">99</b></span>
 </div>
 <canvas id="c"></canvas>
@@ -49,7 +49,7 @@ resize();window.addEventListener('resize',resize);
 // ===== GAME STATE =====
 var G={state:'menu',level:1,score:0,lives:99,maxLevel:9,mx:c.width/2,my:c.height-80,clicked:false,frame:0};
 function gw(l){return Math.min(10,Math.floor(l/10)+1)}
-function gwc(l){var a=[{c:1,s:0,d:10,sp:8,l:'toobey'},{c:2,s:7,d:10,sp:8,l:'toobey'},{c:3,s:9,d:10,sp:9,l:'toobey'},{c:3,s:11,d:7,sp:10,l:'toobey'},{c:5,s:13,d:9,sp:10,l:'toobey'},{c:5,s:15,d:6,sp:11,l:'toobey'},{c:7,s:17,d:7,sp:12,l:'toobey'},{c:7,s:19,d:5,sp:13,l:'toobey'},{c:9,s:21,d:5,sp:14,l:'toobey'},{c:11,s:23,d:4,sp:15,l:'toobey'}];return a[Math.min(l-1,a.length-1)];}
+function gwc(l){var a=[{c:1,s:0,d:10,sp:8,l:'单发'},{c:2,s:7,d:10,sp:8,l:'双发'},{c:3,s:9,d:10,sp:9,l:'三发'},{c:3,s:11,d:7,sp:10,l:'速射'},{c:5,s:13,d:9,sp:10,l:'散弹'},{c:5,s:15,d:6,sp:11,l:'散速'},{c:7,s:17,d:7,sp:12,l:'烈焰'},{c:7,s:19,d:5,sp:13,l:'烈速'},{c:9,s:21,d:5,sp:14,l:'星辰'},{c:11,s:23,d:4,sp:15,l:'耀斑'}];return a[Math.min(l-1,a.length-1)];}
 function glc(l){
   var a=[{},
     {e:6,sp:1.0,fr:150,sr:150,sm:5,bh:0,sc:100,ba:0,la:'初入星空'},
@@ -58,9 +58,9 @@ function glc(l){
     {e:10,sp:1.9,fr:95,sr:95,sm:8,bh:0,sc:400,ba:0,la:'敌方前哨'},
     {e:12,sp:2.4,fr:75,sr:75,sm:10,bh:0,sc:600,ba:0,la:'穿越火线'},
     {e:14,sp:2.6,fr:68,sr:68,sm:11,bh:0,sc:700,ba:0,la:'星际风暴'},
-    {e:14,sp:2.9,fr:60,sr:60,sm:12,bh:5,sc:800,ba:1,la:'死亡星域'},
+    {e:14,sp:2.9,fr:60,sr:60,sm:12,bh:0,sc:800,ba:0,la:'死亡星域'},
     {e:16,sp:3.1,fr:52,sr:52,sm:13,bh:0,sc:900,ba:0,la:'终极挑战'},
-    {e:12,sp:3.5,fr:45,sr:45,sm:15,bh:5,sc:1000,ba:1,la:'⭐最终之战'}
+    {e:12,sp:3.5,fr:45,sr:45,sm:20,bh:5,sc:1000,ba:1,la:'⭐最终之战'}
   ];
   return a[l]||a[1];
 }
@@ -185,10 +185,10 @@ function update(){
   
   for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1);}
   
-  // Win / Level clear: kill 20 enemies in each level
-  if(G.level===G.maxLevel&&!boss&&enemies.length===0&&G.frame>180&&killCount>=20){celebrate();G.state='win';return;}
-  if(!cfg.ba){
-    if(killCount>=20&&enemies.length===0&&G.frame>120){celebrate();G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+  // Win / Level clear
+  if(G.level===G.maxLevel&&G.score>=10000){celebrate();G.state='win';return;}
+  if(!cfg.ba&&G.level<G.maxLevel){
+    if(killCount>=20&&enemies.length===0&&G.frame>120){celebrate();G.state='levelClear';return;}
   }else{
     if(!boss&&enemies.length===0&&G.frame>180&&killCount>=20){celebrate();G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
   }
@@ -223,6 +223,8 @@ function celebrate(){
 function hitPlayer(){
   var wl=gw(G.score);
   if(wl>1){
+    // 被击中不削减分数，仅降低武器等级
+    var newScore=Math.max(0,(wl-2)*10);
     G.score=Math.max(G.score-10,0);
     ap(player.x,player.y,'#ff6b6b',8);
   }else{
@@ -252,7 +254,6 @@ function draw(){
     var gridY=c.height*0.56,gridH=c.height*0.32,btnW=c.width*0.085,btnH=gridH*0.42,gap=c.width*0.005;
     var gridW=btnW*9+gap*8;
     var startX=(c.width-gridW)/2;
-    var levelNames=['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
     ctx.textAlign='center';
     for(var i=0;i<9;i++){
       var bx=startX+i*(btnW+gap),by=gridY;
@@ -262,10 +263,10 @@ function draw(){
       ctx.fillStyle=col;
       ctx.fillRect(bx,by,btnW,btnH);
       ctx.fillStyle='#fff';ctx.font='bold '+(fs*0.2)+'px Microsoft YaHei';
-      ctx.fillText('第'+(i+1)+'关',bx+btnW/2,by+btnH*0.35);
-      ctx.font=(fs*0.15)+'px Microsoft YaHei';
-      ctx.fillStyle='rgba(255,255,255,.7)';
-      ctx.fillText(levelNames[i],bx+btnW/2,by+btnH*0.75);
+      ctx.fillText(glc(i+1).la||'第'+(i+1)+'关',bx+btnW/2,by+btnH*0.35);
+      ctx.font=(fs*0.13)+'px Microsoft YaHei';
+      ctx.fillStyle='rgba(255,255,255,.5)';
+      ctx.fillText('第'+(i+1)+'关',bx+btnW/2,by+btnH*0.75);
       // Boss badge
       if(i+1===5||i+1===8){
         ctx.fillStyle='rgba(231,76,60,.8)';ctx.font='bold '+(fs*0.13)+'px Microsoft YaHei';
@@ -322,7 +323,7 @@ function draw(){
   var wl=gw(G.score),wc=gwc(wl);
   ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,c.width,28);
   ctx.fillStyle='#fff';ctx.font='13px Microsoft YaHei';ctx.textAlign='left';
-  ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+wc.l+' 第'+G.level+'关 (击杀 '+killCount+'/'+glc(G.level).sm*3+' 个敌人过关)',10,20);
+  ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+(glc(G.level).la||'')+' 第'+G.level+'关',10,20);
   // Back to menu button
   ctx.textAlign='right';
   ctx.fillStyle='rgba(74,124,247,.2)';ctx.fillRect(c.width-70,4,64,22);
