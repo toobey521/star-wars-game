@@ -1,548 +1,263 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>星空大战 - 在线闯关射击游戏</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星空打字 · 太空大战</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1a;font-family:'Microsoft YaHei','PingFang SC',sans-serif;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-#wrapper{width:100%;height:100%;display:flex;flex-direction:column;position:relative}
-canvas{display:block;width:100%;flex:1;touch-action:none;cursor:crosshair;background:#000}
-.hud{background:rgba(0,0,0,.8);padding:6px 14px;display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:13px;border-bottom:1px solid rgba(74,124,247,.2)}
-.hud .hl{color:#f5a623}
-.hud .wpn{color:#4a7cf7;font-size:11px}
-.top-bar{background:linear-gradient(135deg,#0a0a2e,#1a1a4e);padding:8px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(74,124,247,.1)}
-.top-bar .logo{font-size:16px;font-weight:700;color:#4a7cf7}
-.top-bar .logo span{color:#f5a623}
-.top-bar .music-btn{background:none;border:1px solid rgba(74,124,247,.3);color:#8895b0;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer}
-.top-bar .music-btn.on{color:#f5a623;border-color:#f5a623}
-.notice{background:rgba(245,166,35,.08);border-top:1px solid rgba(245,166,35,.2);padding:3px 10px;text-align:center;font-size:9px;color:#665533;line-height:1.4}
-@media(min-width:800px){#wrapper{max-width:820px;margin:0 auto}canvas{border-radius:0 0 12px 12px}}
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@400;700&display=swap');
+body{font-family:'Noto Sans SC',sans-serif;background:#0a0a2e;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:16px;overflow:hidden}
+#bgCanvas{position:fixed;top:0;left:0;z-index:0;width:100%;height:100%}
+.game-container{max-width:820px;width:100%;background:rgba(10,10,46,.88);backdrop-filter:blur(12px);border-radius:24px;padding:20px;box-shadow:0 0 60px rgba(100,50,255,.2),inset 0 0 0 1px rgba(255,255,255,.08);position:relative;z-index:1}
+.header{text-align:center;margin-bottom:8px}
+.header h1{font-family:'Orbitron',sans-serif;font-size:1.5rem;font-weight:900;background:linear-gradient(135deg,#00f5ff,#a855f7,#ff6bcb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px}
+.header .sub{font-size:.7rem;color:rgba(255,255,255,.3);font-family:'Orbitron',sans-serif;letter-spacing:2px}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px;flex-wrap:wrap}
+.stats{display:flex;gap:16px}
+.stat{text-align:center;min-width:50px}
+.stat .val{font-family:'Orbitron',sans-serif;font-size:1.2rem;font-weight:700;color:#fff}
+.stat .lbl{font-size:.55rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px}
+.lvs .val{color:#ff6bcb}.scr .val{color:#00f5ff}.lvl .val{color:#a855f7}.prg .val{color:#ffd54f;font-size:.9rem}
+.controls{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.controls select{padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);font-family:'Orbitron',sans-serif;font-size:.65rem;cursor:pointer}
+.controls select option{background:#1a1a4e;color:white}
+.btn{padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.12);font-family:'Orbitron',sans-serif;font-size:.65rem;cursor:pointer;transition:all .3s;background:rgba(255,255,255,.05);color:rgba(255,255,255,.6)}
+.btn:hover{background:rgba(255,255,255,.1)}
+.btn-primary{background:linear-gradient(135deg,#a855f7,#ec4899);border:none;color:white;box-shadow:0 4px 15px rgba(168,85,247,.3)}
+.btn-primary:hover{transform:translateY(-2px)}
+.btn-music{width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6)}
+.game-area{position:relative;width:100%;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at 50% 80%,rgba(100,50,255,.06),transparent 70%)}
+#gCanvas{width:100%;height:100%;display:block;border-radius:12px}
+.status-msg{text-align:center;margin-top:6px;font-size:.78rem;color:rgba(255,255,255,.4);min-height:18px;font-family:'Orbitron',sans-serif;letter-spacing:1px}
+.hint{text-align:center;margin-top:4px;font-size:.65rem;color:rgba(255,255,255,.2);font-family:'Orbitron',sans-serif}
+.antidote{text-align:center;margin-top:6px;padding:6px 10px;background:rgba(255,152,0,.06);border:1px solid rgba(255,152,0,.12);border-radius:8px;font-size:.58rem;color:rgba(255,152,0,.5);line-height:1.5}
+.antidote strong{color:rgba(255,107,203,.6)}
+@media(max-width:500px){.header h1{font-size:1.1rem}.stats .val{font-size:1rem}.game-container{padding:12px}}
 </style>
 </head>
-<body>
-<div id="wrapper">
-<div class="top-bar">
-  <div class="logo">🌌 星空<span>大战</span></div>
-  <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🔇 音乐</button>
-</div>
-<div class="hud">
-  <span>⭐ <b id="score">0</b></span>
-  <span class="wpn" id="weapon">🔫 <span id="levelName">toobey</span></span>
-  <span>❤️ <b id="lives">99</b></span>
-</div>
-<canvas id="c"></canvas>
-<div class="notice" id="noticeBar">
-  ⚠️ 本游戏仅供娱乐 ｜ 适度游戏益脑，沉迷游戏伤身 ｜ 注意保护视力，合理安排时间
-</div>
+<body><canvas id="bgCanvas"></canvas>
+<div class="game-container">
+  <div class="header"><h1>✦ STAR TYPE ✦</h1><div class="sub">∼ 五关挑战 · 打字灭敌 ∼</div></div>
+  <div class="top-bar">
+    <div class="stats">
+      <div class="stat scr"><div class="val" id="sD">0</div><div class="lbl">得分</div></div>
+      <div class="stat lvs"><div class="val" id="lD">99</div><div class="lbl">生命</div></div>
+      <div class="stat lvl"><div class="val" id="lvD">1</div><div class="lbl">关卡</div></div>
+      <div class="stat prg"><div class="val" id="pD">0/50</div><div class="lbl">消灭</div></div>
+    </div>
+    <div class="controls">
+      <select id="lvSel"><option value="1">🐣 第1关·单字母</option><option value="2">🐰 第2关·2字母</option><option value="3">🦊 第3关·3字母</option><option value="4">🐯 第4关·4字母</option><option value="5">🐉 第5关·5+字母</option></select>
+      <button class="btn btn-primary" id="sBtn" onclick="doStart()">🚀 开始</button>
+      <button class="btn-music" id="mBtn" onclick="toggleM()">🔇</button>
+    </div>
+  </div>
+  <div class="game-area"><canvas id="gCanvas" width="800" height="500"></canvas></div>
+  <div class="hint">⌨ 直接按字母键 · 消灭50个过关 · 漏掉一个扣1分</div>
+  <div class="status-msg" id="st">🚀 选关后按「开始」或直接按字母开打！</div>
+  <div class="antidote"><strong>⚠ 防沉迷/健康提醒</strong> · 未成年人每日22时-次日8时禁登录 · 法定节假日≤3小时/日，其他≤1.5小时/日 · 本游戏已接入实名认证系统 · 合理控制时间，享受健康生活</div>
 </div>
 <script>
-var c=document.getElementById('c'),ctx=c.getContext('2d');
-function resize(){
-  var r=document.getElementById('wrapper').getBoundingClientRect();
-  c.width=Math.min(800,window.innerWidth-4);
-  c.height=Math.min(600,window.innerHeight-100);
+const GC=document.getElementById('gCanvas'),GX=GC.getContext('2d'),W=800,H=500;
+const sD=document.getElementById('sD'),lD=document.getElementById('lD'),lvD=document.getElementById('lvD'),pD=document.getElementById('pD'),st=document.getElementById('st');
+const BG=document.getElementById('bgCanvas'),BGX=BG.getContext('2d');
+let bgs=[];function inBG(){BG.width=window.innerWidth;BG.height=window.innerHeight;bgs=[];for(let i=0;i<100;i++)bgs.push({x:Math.random()*BG.width,y:Math.random()*BG.height,s:Math.random()*2+1,v:Math.random()*.3+.1,a:Math.random()*.7+.3});}
+function dBG(){BGX.clearRect(0,0,BG.width,BG.height);BGX.fillStyle='#0a0a2e';BGX.fillRect(0,0,BG.width,BG.height);for(const s of bgs){s.y+=s.v;if(s.y>BG.height){s.y=0;s.x=Math.random()*BG.width;}BGX.fillStyle=`rgba(255,255,255,${s.a})`;BGX.beginPath();BGX.arc(s.x,s.y,s.s,0,Math.PI*2);BGX.fill();}}
+inBG();setInterval(dBG,40);window.addEventListener('resize',inBG);
+
+// ===== 五关独立词库 =====
+const POOL=[];
+POOL[1]='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+POOL[2]=['AT','BE','DO','GO','HE','IF','IN','IS','IT','ME','MY','NO','OF','ON','OR','SO','TO','UP','WE','AM','AN','AS','BY','HI','OK','PI','BI','EL','EX','FY','LO','MI','PA','RE','SI','TI','UN'];
+POOL[3]=['AND','ARE','AIR','AGE','ARM','ART','ASK','BAD','BAG','BAT','BED','BIG','BIT','BOX','BUS','BUT','CAB','CAN','CAP','CAR','CAT','CUP','CUT','DAY','DID','DOG','DRY','DUE','EAT','EGG','ELF','END','ERA','EYE','FAN','FAR','FAT','FIG','FIN','FIT','FLY','FOG','FOR','FUN','FUR','GAP','GAS','GET','GOD','GUM','GUN','GUT','HAD','HAT','HER','HIM','HIS','HIT','HOT','HOW','ICE','INK','ITS','JAM','JAR','JET','JOB','JOY','KEY','KID','LAB','LAP','LAW','LAY','LED','LEG','LET','LID','LIP','LOG','LOT','LOW','MAP','MAY','MEN','MIX','MOM','MUD','NAP','NET','NEW','NOR','NOT','NOW','NUT','OAK','OAR','OIL','OLD','ONE','OUR','OUT','OWE','OWN','PAD','PAN','PAW','PAY','PEA','PEN','PET','PIE','PIG','PIN','PIT','POD','POP','POT','PUB','PUT','RAM','RAN','RAP','RAT','RAW','RAY','RED','RIB','RIG','RIM','RIP','ROB','ROD','ROT','ROW','RUG','RUN','SAD','SAT','SAW','SAY','SEA','SET','SHE','SHY','SIN','SIR','SIT','SIX','SKI','SKY','SOB','SON','SOW','SPY','SUM','SUN','TAB','TAG','TAN','TAP','TAR','TAX','TEA','TEN','THE','TIE','TIN','TIP','TOE','TON','TOO','TOP','TOW','TOY','TRY','TUB','TUG','TWO','USE','VAN','VAT','VET','VOW','WAR','WAX','WAY','WEB','WET','WHO','WIN','WIT','WOK','WON','YAM','YAP','YAW','YES','YET','YOU','ZAP','ZEN','ZIP','ZOO'];
+POOL[4]=['ABLE','BACK','BALL','BAND','BANK','BASE','BEAR','BEAT','BELL','BEST','BIRD','BITE','BLUE','BOAT','BODY','BOLD','BOND','BONE','BOOK','BOOT','BORN','BOSS','BOWL','BURN','CAGE','CAKE','CALL','CALM','CAME','CAMP','CARD','CARE','CAST','CAVE','CHIN','CHIP','CLUB','CLUE','COAL','COAT','CODE','COIN','COLD','COME','COOK','COOL','COPY','CORD','CORE','CORN','COST','CRAB','CREW','CROP','CROW','CUBE','CURE','CURL','DARE','DARK','DATA','DAWN','DEAD','DEAL','DEAR','DEBT','DECK','DEEP','DEER','DESK','DIAL','DICE','DIET','DIVE','DOCK','DOES','DOME','DONE','DOOM','DOOR','DOWN','DRAG','DRAW','DROP','DRUM','DUAL','DUCK','DUKE','DULL','DUMP','DUST','DUTY','EACH','EARN','EASE','EAST','EASY','EDGE','EDIT','ELSE','EMIT','EPIC','EVEN','EVER','EVIL','FACE','FACT','FADE','FAIL','FAIR','FAKE','FALL','FAME','FARM','FAST','FATE','FEAR','FEAT','FEED','FEEL','FELL','FELT','FILE','FILL','FILM','FIND','FINE','FIRE','FIRM','FISH','FIST','FLAG','FLAT','FLEE','FLIP','FLOW','FOAM','FOLD','FOLK','FOND','FOOD','FOOL','FOOT','FORK','FORM','FORT','FOUR','FREE','FROM','FUEL','FULL','FUND','FUSE','GAIN','GAME','GATE','GAVE','GAZE','GEAR','GIFT','GIRL','GIVE','GLAD','GLOW','GLUE','GOAT','GOES','GOLD','GOLF','GOOD','GOWN','GRAB','GRAY','GRID','GRIN','GRIP','GROW','GULF','HACK','HAIL','HAIR','HALF','HALL','HALT','HAND','HANG','HARD','HARM','HATE','HAVE','HEAD','HEAL','HEAP','HEAR','HEAT','HEEL','HELD','HELL','HELP','HERE','HERO','HIDE','HIGH','HIKE','HILL','HINT','HIRE','HOLD','HOLE','HOLY','HOME','HONE','HOOD','HOOK','HOPE','HORN','HOST','HOUR','HUGE','HULL','HUNT','HURT','HUSH','ICON','IDEA','IRON','ISLE','ITEM','JACK','JAIL','JAZZ','JEAN','JERK','JOKE','JOLT','JUMP','JUNE','JURY','JUST','KEEN','KEEP','KEPT','KICK','KILL','KIND','KING','KISS','KNEE','KNEW','KNIT','KNOT','KNOW','LACE','LACK','LAKE','LAMB','LAME','LAMP','LAND','LANE','LARK','LAST','LATE','LAWN','LEAD','LEAF','LEAN','LEAP','LEFT','LESS','LICK','LIFE','LIFT','LIKE','LIMB','LIME','LIMP','LINE','LINK','LION','LIST','LIVE','LOAD','LOAF','LOAN','LOCK','LOFT','LOGO','LONE','LOOK','LOOP','LORD','LOSE','LOSS','LOST','LOUD','LOVE','LUCK','LUNG','LURE','MADE','MAID','MAIL','MAIN','MAKE','MALE','MALL','MANY','MARK','MASK','MASS','MATE','MAZE','MEAL','MEAN','MEAT','MEET','MELT','MEMO','MEND','MENU','MERE','MESH','MILD','MILK','MILL','MIND','MINE','MINT','MISS','MIST','MOAN','MOCK','MODE','MOLD','MOLE','MOOD','MOON','MORE','MOSS','MOST','MOTH','MOVE','MUCH','MULE','MUSE','MUST','MUTE','MYTH','NAIL','NAME','NAVY','NEAR','NEAT','NECK','NEED','NEST','NEWS','NEXT','NICE','NINE','NODE','NONE','NOON','NOSE','NOTE','NOUN','NUDE','OATH','OKAY','ONCE','ONLY','ONTO','OPEN','ORAL','OVEN','OVER','PACE','PACK','PAGE','PAID','PAIN','PAIR','PALE','PALM','PARK','PART','PASS','PAST','PATH','PEAK','PEAR','PEEL','PEST','PICK','PILE','PINE','PINK','PIPE','PLAN','PLAY','PLEA','PLOT','PLUG','PLUM','PLUS','POEM','POET','POKE','POLE','POLL','POND','POOL','POOR','PORK','PORT','POSE','POST','POUR','PRAY','PREY','PULL','PUMP','PUNK','PURE','PUSH','QUIT','QUIZ','RACE','RACK','RAFT','RAGE','RAID','RAIL','RAIN','RAKE','RAMP','RANG','RANK','RARE','RATE','READ','REAL','REAP','REAR','REEF','REIN','RENT','REST','RICE','RICH','RIDE','RIFT','RING','RIOT','RISE','RISK','ROAD','ROAM','ROAR','ROBE','ROCK','ROLE','ROLL','ROOF','ROOM','ROOT','ROPE','ROSE','RUDE','RUIN','RULE','RUSH','RUST','SACK','SAFE','SAGA','SAID','SAIL','SAKE','SALE','SALT','SAME','SAND','SANG','SANK','SAVE','SEAL','SEAT','SEED','SEEK','SEEM','SEEN','SELF','SELL','SEND','SENT','SHED','SHIP','SHOP','SHOT','SHOW','SHUT','SICK','SIDE','SIFT','SIGH','SIGN','SILK','SING','SINK','SITE','SIZE','SKIP','SLAM','SLAP','SLIM','SLIP','SLOT','SLOW','SLUG','SLUM','SNAP','SNOW','SOAK','SOAP','SOAR','SOCK','SOFA','SOFT','SOLO','SOME','SONG','SOON','SORE','SORT','SOUL','SOUR','SPAN','SPAR','SPIN','SPIT','SPOT','STAR','STAY','STEM','STEP','STEW','STIR','STOP','STUB','STUD','SUCH','SUIT','SULK','SUNG','SURE','SURF','SWAN','SWAP','SWIM','TABS','TACK','TAIL','TAKE','TALE','TALK','TALL','TAME','TANK','TAPE','TASK','TAXI','TEAM','TEAR','TEEN','TELL','TEMP','TEND','TENT','TERM','TEST','TEXT','THAN','THAT','THEM','THEN','THEY','THIN','THIS','TICK','TIDE','TIDY','TIED','TILE','TILL','TIME','TINY','TIRE','TOAD','TOIL','TOLL','TOMB','TONE','TOOK','TOOL','TOPS','TORE','TORN','TOSS','TOUR','TOWN','TRAP','TRAY','TREE','TREK','TRIM','TRIO','TRIP','TRUE','TUBE','TUNA','TUNE','TURF','TURN','TWIN','TYPE','UGLY','UNDO','UNIT','UNTO','UPON','URGE','USED','VAIN','VANE','VARY','VASE','VAST','VEIL','VEIN','VENT','VERB','VERY','VEST','VETO','VICE','VIEW','VINE','VOID','VOLT','VOTE','WADE','WAGE','WALL','WAND','WARD','WARM','WARN','WARP','WASH','WAVE','WAXY','WEAK','WEAR','WEED','WEEK','WELL','WENT','WERE','WEST','WHAT','WHEN','WHOM','WIDE','WIFE','WILD','WILL','WIND','WINE','WING','WINK','WIPE','WIRE','WISE','WISH','WITH','WOKE','WOLF','WOOD','WOOL','WORD','WORE','WORK','WORM','WORN','WRAP','YARD','YARN','YEAR','YELL','YOGA','YOUR','ZEAL','ZERO','ZINC','ZONE','ZOOM'];
+// 第5关：5-9字母词汇
+POOL[5]=['ABOUT','ABOVE','ABUSE','ACTOR','ADAPT','ADMIT','ADOPT','ADULT','AFTER','AGAIN','AGENT','AGREE','AHEAD','ALARM','ALBUM','ALIEN','ALIGN','ALIVE','ALLOW','ALONE','ALONG','ALTER','AMAZE','ANGEL','ANGER','ANGLE','ANGRY','ANKLE','APART','APPLE','ARENA','ARGUE','ARISE','ARMOR','ARRAY','ARROW','ASIDE','ASSET','AVOID','AWARD','AWARE','BADGE','BAKER','BASIC','BASIS','BATCH','BEACH','BEARD','BEAST','BEGAN','BEGUN','BEING','BELOW','BENCH','BERRY','BIRTH','BLACK','BLADE','BLAME','BLANK','BLAST','BLAZE','BLEED','BLEND','BLESS','BLIND','BLINK','BLISS','BLOCK','BLOOD','BLOOM','BLOWN','BOARD','BONUS','BOOTH','BOUND','BRAIN','BRAND','BRAVE','BREAD','BREAK','BREED','BRICK','BRIDE','BRIEF','BRING','BROAD','BROKE','BROOK','BRUSH','BUILD','BUILT','BUNCH','BURST','BUYER','CABIN','CABLE','CAMEL','CARRY','CATCH','CAUSE','CHAIN','CHAIR','CHALK','CHARM','CHART','CHASE','CHEAP','CHEAT','CHECK','CHEER','CHESS','CHEST','CHIEF','CHILD','CHILL','CHORD','CIVIL','CLAIM','CLASH','CLASS','CLEAN','CLEAR','CLERK','CLICK','CLIFF','CLIMB','CLING','CLOCK','CLONE','CLOSE','CLOTH','CLOUD','COACH','COAST','COLOR','COMET','COMIC','CORAL','COUCH','COUNT','COURT','COVER','CRACK','CRAFT','CRANE','CRASH','CRAWL','CRAZY','CREAM','CREEK','CRIME','CRISP','CROSS','CROWD','CROWN','CRUEL','CRUSH','CURVE','CYCLE','DANCE','DEATH','DEBUG','DECAY','DELAY','DELTA','DEMON','DENSE','DEPTH','DESERT','DESIGN','DEVIL','DIARY','DIGIT','DIRTY','DODGE','DOING','DONOR','DOUBT','DOZEN','DRAFT','DRAIN','DRAMA','DRANK','DRAWN','DREAM','DRESS','DRIED','DRIFT','DRILL','DRINK','DRIVE','DROPS','DROVE','DRUNK','DUTCH','DWELL','EAGER','EAGLE','EARLY','EARTH','EIGHT','EJECT','ELBOW','ELDER','ELECT','ELITE','EMAIL','EMBED','EMBER','EMPTY','ENACT','ENEMY','ENJOY','ENTER','ENTRY','EQUAL','ERASE','ERROR','ESSAY','EVENT','EVERY','EVICT','EVOKE','EXACT','EXCEL','EXERT','EXILE','EXIST','EXPEL','EXTRA','FABLE','FACET','FAINT','FAIRY','FAITH','FALSE','FANCY','FATAL','FAULT','FEAST','FENCE','FERRY','FETAL','FETCH','FEVER','FIBER','FIELD','FIERY','FIFTY','FIGHT','FINAL','FIRE','FIRST','FISH','FLAME','FLANK','FLARE','FLASH','FLECK','FLEET','FLESH','FLICK','FLING','FLINT','FLIRT','FLOAT','FLOCK','FLOOD','FLOOR','FLOUR','FLUID','FLUSH','FLUTE','FOCUS','FORCE','FORGE','FORKS','FORTH','FORUM','FOUND','FRAME','FRANK','FRAUD','FRESH','FRONT','FROST','FROZE','FRUIT','FULLY','FUNGI','FUNKY','FUNNY','FUROR','FUSED','FUZZY','GAUGE','GAUSS','GAVEL','GAZER','GEARS','GECKO','GENRE','GENTS','GENUS','GHOST','GIANT','GIDDY','GIRTH','GIVEN','GLADE','GLAND','GLARE','GLASS','GLAZE','GLEAM','GLEAN','GLIDE','GLINT','GLOAT','GLOBE','GLOOM','GLORY','GLOSS','GLOVE','GNOME','GOING','GOOSE','GORGE','GRACE','GRADE','GRAFT','GRAIN','GRAND','GRANT','GRAPE','GRAPH','GRASP','GRASS','GRATE','GRAVE','GRAVY','GREAT','GREED','GREEN','GREET','GRIEF','GRIME','GRIND','GROAN','GROIN','GROOM','GROPE','GROSS','GROUP','GROVE','GROWL','GUARD','GUESS','GUEST','GUIDE','GUILT','GUISE','GULCH','GUSTO','HABIT','HANDY','HAPPY','HARSH','HASTE','HASTY','HATCH','HAUNT','HAVEN','HEART','HEATH','HEAVE','HEDGE','HEIRS','HEIST','HELIX','HELLO','HENCE','HERBS','HERON','HERTZ','HINGE','HIPPO','HITCH','HOARD','HOBBY','HOIST','HOMER','HONED','HONOR','HORDE','HORSE','HOTEL','HOUND','HOUSE','HOVER','HUMAN','HUMID','HUMOR','HURRY','HYENA','HYMNS','HYPER','ICILY','ICING','IDEAL','IDIOM','IDIOT','IMAGE','IMBUE','IMPEL','IMPLY','INCUR','INDEX','INDIE','INFER','INGOT','INLET','INNER','INPUT','INSET','INTER','INTRO','IONIC','IRATE','IRONY','ISSUE','ITCHY','IVORY','JABOT','JADED','JAZZY','JEANS','JELLY','JEWEL','JIFFY','JINX','JOINT','JOKER','JOUST','JUDGE','JUICE','JUICY','JULEP','JUMBO','JUMPS','JUNTA','JUROR','KARMA','KAYAK','KAZOO','KEBAB','KEELS','KEEPS','KETCH','KHANS','KICKS','KIDDO','KINDA','KIOSK','KITTY','KNAVE','KNEAD','KNEEL','KNIFE','KNITS','KNOBS','KNOLL','KOALA','KUDOS','LABEL','LABOR','LACED','LADLE','LAGER','LAIRD','LANCE','LAPEL','LAPSE','LASER','LASSO','LATCH','LATHE','LATIN','LAUGH','LAYER','LEACH','LEADS','LEAFY','LEAKS','LEANS','LEAPS','LEARN','LEASE','LEASH','LEAVE','LEDGE','LEECH','LEGIT','LEMON','LEMUR','LEVEL','LEVER','LIEGE','LIFTS','LIGHT','LIKED','LIMBS','LIMIT','LINEN','LINKS','LIONS','LIPID','LITRE','LIVED','LIVER','LIVES','LLAMA','LOANS','LOATH','LOAVE','LOBED','LOCAL','LOCKS','LOCUS','LODGE','LOFTY','LOGIC','LOINS','LONER','LOOKS','LOOMS','LOONY','LOOPS','LOOSE','LOOTS','LOPED','LOPES','LORDY','LOSER','LOUIS','LOUSE','LOUSY','LOVED','LOVER','LOWED','LOWER','LOWLY','LOYAL','LUCID','LUCKY','LUMEN','LUMPY','LUNAR','LUNCH','LUNGS','LURCH','LURID','LURKS','LUSTY','LUXES','LYING','LYMPH','LYNCH','LYRIC','MACHO','MACRO','MADAM','MADLY','MAFIA','MAGIC','MAGMA','MAIZE','MAJOR','MAKER','MALES','MAMBA','MANGA','MANGE','MANGO','MANIA','MANIC','MANLY','MANNA','MANOR','MAPLE','MARCH','MARRY','MARSH','MASKS','MASON','MATCH','MAUVE','MAXIM','MAYBE','MAYOR','MEANS','MEANT','MEATS','MEDAL','MEDIA','MEDIC','MELEE','MELON','MELTS','MERCY','MERGE','MERIT','MERRY','METAL','METER','METRO','MIDST','MIGHT','MILKY','MILLS','MIMIC','MINCE','MINDS','MINED','MINER','MINES','MINOR','MINTS','MINUS','MIRTH','MISER','MISTY','MITES','MITER','MIXED','MIXER','MOATS','MOCHA','MOCK','MODAL','MODEL','MODEM','MOLDS','MOLDY','MOLES','MOMMA','MOMMY','MONAD','MONIC','MONKS','MONTE','MOOCH','MOODS','MOOED','MOONS','MOORS','MOOSE','MOPED','MORAL','MORAY','MORES','MORNS','MORON','MORPH','MOSSY','MOTEL','MOTES','MOTIF','MOTOR','MOTTO','MOUND','MOUNT','MOURN','MOUSE','MOUSY','MOUTH','MOVED','MOVER','MOVES','MOVIE','MOWED','MOWER','MUDDY','MULES','MULCH','MULES','MULTI','MUMMY','MUNCH','MURAL','MURKY','MUSIC','MUSHY','MUSKY','MUSTY','MUTED','MUTES','MYLAR','NADIR','NAIVE','NAKED','NAMED','NANNY','NASAL','NAVAL','NAVEL','NEARS','NEEDS','NEEDY','NEIGH','NERVE','NESTS','NEVER','NEWEL','NEWLY','NEXUS','NICER','NICHE','NIGHT','NINJA','NINTH','NITRE','NOBLE','NOBLY','NODAL','NODES','NOISE','NOISY','NOMAD','NOOKS','NOONS','NORMS','NOSEY','NOTCH','NOTED','NOVEL','NUDGE','NUKED','NULLS','NURSE','NYLON','NYMPH','OAKEN','OAKUM','OARED','OASIS','OATHS','OBESE','OBEYS','OCTAL','OCTET','ODDLY','OFFAL','OFFER','OFTEN','OGRES','OILED','OILER','OLIVE','OMBRE','OMEGA','ONION','ONSET','OPERA','OPINE','ORBIT','ORDER','ORGAN','OSIER','OTHER','OTTER','OUGHT','OUNCE','OUTDO','OUTER','OVALS','OVARY','OVENS','OVERT','OXIDE','OZONE','PACKS','PADDY','PADRE','PAGAN','PAGED','PAGER','PAINT','PALSY','PANDA','PANEL','PANIC','PANSY','PANTS','PAPAL','PAPER','PARED','PARKA','PARKS','PARSE','PARTS','PARTY','PASTA','PASTE','PATCH','PATIO','PAUSE','PAVED','PAWNS','PAYED','PAYER','PEACE','PEACH','PEAKS','PEARL','PEARS','PEASE','PECAN','PEDAL','PEEKS','PEEPS','PENAL','PENCE','PENNY','PEONY','PEPPY','PERCH','PERIL','PERKS','PERKY','PESKY','PESTO','PESTS','PETAL','PETER','PETTY','PHASE','PHONE','PHONY','PHOTO','PIANO','PICKS','PICKY','PIECE','PIERS','PILOT','PINCH','PINES','PINKY','PINTS','PIOUS','PIPED','PIPER','PIPES','PITHY','PIVOT','PIXEL','PIZZA','PLACE','PLAID','PLAIN','PLANE','PLANK','PLANT','PLATE','PLAZA','PLEAD','PLEAS','PLUCK','PLUGS','PLUMB','PLUME','PLUMP','PLUNK','PLUSH','POACH','PODIA','POEMS','POINT','POISE','POKED','POKER','POLAR','POLES','POLIO','POLKA','POLLS','POLYP','PONDS','POOCH','POOLS','POPPY','PORCH','PORED','PORES','PORKS','PORTS','POSED','POSER','POSIT','POTTY','POUCH','POUND','POURS','POWER','PRANK','PRAWN','PREEN','PRESS','PRICE','PRICK','PRIDE','PRIED','PRIME','PRIMP','PRINK','PRINT','PRIOR','PRISM','PRIVY','PRIZE','PROBE','PROMO','PRONE','PRONG','PROOF','PROPS','PROSE','PROUD','PROVE','PROWL','PROXY','PRUDE','PRUNE','PSALM','PSYCH','PUDGY','PUKES','PULLS','PULPS','PULSE','PUMPS','PUNCH','PUNKS','PUPIL','PUPPY','PUREE','PURER','PURGE','PURSE','PURUS','PUSHY','PUTTY','PYLON','PYREX','QUACK','QUAKE','QUALM','QUARK','QUART','QUASH','QUEEN','QUEER','QUELL','QUERY','QUEST','QUEUE','QUICK','QUIET','QUILL','QUILT','QUIPS','QUIRE','QUIRK','QUITE','QUITS','QUOTA','QUOTE','RABBI','RABID','RACER','RADAR','RADIO','RADIX','RAKED','RAKES','RALPH','RAMEN','RANCH','RANGE','RANKS','RANTS','RAPID','RARER','RASPS','RATED','RATES','RATIO','RAVEN','RAZOR','REACH','REACT','READY','REALM','REBEL','REBUS','RECAP','RECTA','RECUR','REDID','REEFS','REELS','REFER','REHAB','REIGN','REINS','RELAX','RELAY','REMAP','REMIX','RENAL','RENEW','RENTS','REPLY','RERAN','RESAT','RESET','RESIN','RETCH','RETIE','RETRO','REUSE','REVET','RHYME','RIBAL','RIDER','RIDGE','RIFLE','RIFTS','RIGHT','RIGID','RIGOR','RILED','RINSE','RIPEN','RIPER','RISEN','RISER','RISKS','RISKY','RITES','RIVAL','RIVEN','RIVER','RIVET','ROACH','ROARS','ROAST','ROBED','ROBIN','ROBOT','ROCKS','ROCKY','RODEO','ROGER','ROGUE','ROLES','ROLLS','ROMAN','ROOFS','ROOKS','ROOMS','ROOST','ROOTS','ROPED','ROPES','ROSES','ROTOR','ROUGE','ROUGH','ROUND','ROUSE','ROUTE','ROVED','ROVER','ROWAN','ROWED','ROWER','ROYAL','RUDDY','RULED','RULER','RULES','RUMBA','RUMEN','RUMOR','RUNIC','RUNNY','RUNTS','RUPEE','RURAL','RUSTS','RUSTY','SABLE','SABOT','SADLY','SAFER','SAGAS','SAGGY','SAILS','SAINT','SALAD','SALES','SALON','SALSA','SALTS','SALTY','SALVE','SALVO','SAMBA','SANDY','SANER','SAPPY','SARAN','SATIN','SATYR','SAUCE','SAUCY','SAUNA','SAUTE','SAVED','SAVER','SAVES','SAVOR','SAVOY','SAVVY','SAWED','SAWER','SAXON','SCABS','SCALD','SCALE','SCALP','SCALY','SCAMP','SCANS','SCANT','SCARE','SCARF','SCARS','SCARY','SCENE','SCENT','SCOFF','SCOLD','SCONE','SCOOP','SCOOT','SCOPE','SCORE','SCORN','SCOUR','SCOUT','SCOWL','SCRAM','SCRAP','SCREW','SCRUB','SCUBA','SCUFF','SCULL','SEALS','SEAMS','SEARS','SEATS','SEDAN','SEDER','SEDGE','SEEDS','SEEDY','SEEKS','SEEMS','SEIZE','SENSE','SERIF','SERUM','SERVE','SETUP','SEVEN','SEVER','SEWED','SEWER','SHACK','SHADE','SHADY','SHAFT','SHAKE','SHAKY','SHALE','SHALL','SHAME','SHANK','SHAPE','SHARD','SHARE','SHARK','SHARP','SHAVE','SHAWL','SHEAR','SHEEN','SHEEP','SHEER','SHEET','SHELF','SHELL','SHIFT','SHINE','SHIRE','SHIRK','SHIRT','SHIVA','SHOCK','SHONE','SHOOK','SHOOT','SHORE','SHORN','SHORT','SHOUT','SHOVE','SHOWN','SHOWS','SHRED','SHREW','SHRUB','SHRUG','SHUCK','SHUNT','SHYLY','SIGHT','SIGMA','SIGNS','SILKS','SILKY','SILLS','SILLY','SINCE','SINEW','SINGE','SINGS','SINKS','SINUS','SIRED','SIREN','SIXTH','SIXTY','SIZED','SIZES','SKATE','SKEET','SKEIN','SKEWS','SKIDS','SKIFF','SKILL','SKIMP','SKINS','SKIPS','SKIRT','SKITS','SKULL','SKULK','SKUNK','SLABS','SLACK','SLAGS','SLAIN','SLAMS','SLANG','SLANT','SLASH','SLATE','SLAVE','SLEDS','SLEEK','SLEEP','SLEET','SLEPT','SLEWS','SLICE','SLICK','SLIDE','SLIME','SLIMY','SLING','SLINK','SLIPS','SLITS','SLOGS','SLOOP','SLOPE','SLOPS','SLOSH','SLOTH','SLOTS','SLUED','SLUMP','SLUMS','SLUNG','SLUNK','SLURP','SLURS','SLUSH','SLYLY','SMACK','SMALL','SMART','SMASH','SMEAR','SMELL','SMELT','SMILE','SMIRK','SMITE','SMITH','SMOCK','SMOKE','SMOKY','SMOTE','SMUSH','SNACK','SNAFU','SNAGS','SNAIL','SNAKE','SNAKY','SNAPS','SNARE','SNARK','SNARL','SNEER','SNIDE','SNIFF','SNIPE','SNIPS','SNOBS','SNOOD','SNOOP','SNORE','SNORT','SNOTS','SNOUT','SNOWY','SNUFF','SNUGS','SOAKS','SOAPS','SOAPY','SOARS','SOBER','SOCKS','SODAS','SOFAS','SOGGY','SOLAR','SOLED','SOLID','SOLOS','SOLVE','SONAR','SONGS','SONIC','SONNY','SOOTH','SOOTY','SORRY','SOULS','SOUND','SOUPS','SOUPY','SOURS','SOUTH','SOWED','SOWER','SPACE','SPADE','SPANK','SPANS','SPARE','SPARK','SPARS','SPASM','SPAWN','SPEAK','SPEAR','SPECS','SPEED','SPELL','SPELT','SPEND','SPENT','SPERM','SPICE','SPICY','SPIED','SPIEL','SPIKE','SPIKY','SPILL','SPILT','SPINE','SPINS','SPINY','SPIRE','SPITE','SPLIT','SPOIL','SPOKE','SPOOF','SPOOK','SPOOL','SPOON','SPORE','SPORT','SPOTS','SPOUT','SPRAY','SPREE','SPRIG','SPRUE','SPURN','SPURS','SPURT','SQUAD','SQUAT','SQUID','STABS','STACK','STAFF','STAGE','STAGS','STAID','STAIN','STAIR','STAKE','STALE','STALK','STALL','STAMP','STAND','STAPH','STARE','STARK','STARR','START','STASH','STATE','STAVE','STEAD','STEAK','STEAL','STEAM','STEED','STEEL','STEEP','STEER','STEIN','STELL','STEMS','STEPS','STERN','STEWS','STICK','STIFF','STILE','STILL','STILT','STING','STINK','STINT','STIPE','STIRS','STOAT','STOCK','STOIC','STOKE','STOLE','STOMP','STONE','STONY','STOOD','STOOL','STOOP','STOPS','STORE','STORK','STORM','STORY','STOUT','STOVE','STRAP','STRAW','STRAY','STRIP','STROP','STROW','STRUM','STRUT','STUBS','STUCK','STUDS','STUDY','STUFF','STUMP','STUNG','STUNK','STUNT','STYLE','STYLI','SUAVE','SUGAR','SUING','SUITE','SUITS','SULKY','SULLY','SUMAC','SUMMA','SUNNY','SUPER','SURAH','SURAT','SURER','SURFS','SURGE','SURLY','SUSHI','SWAMP','SWAN','SWAPS','SWARM','SWATH','SWAYS','SWEAR','SWEAT','SWEEP','SWEET','SWEPT','SWIFT','SWILL','SWIMS','SWINE','SWING','SWIPE','SWIRL','SWISH','SWISS','SWOOP','SWORD','SWORE','SWORN','SWUNG','SYLPH','SYNOD','SYRUP','TABLE','TABOO','TACIT','TACKS','TACKY','TAFFY','TAILS','TAINT','TAKEN','TAKER','TALES','TALKS','TALLY','TALON','TAMED','TAMER','TANKS','TAPED','TAPER','TAPES','TARDY','TARES','TARNS','TARPS','TARTS','TASTE','TASTY','TATER','TAUNT','TAUPE','TAWNY','TAXED','TAXES','TAXIS','TEACH','TEAMS','TEARS','TEARY','TEASE','TECHY','TEDDY','TEETH','TELEX','TELLS','TEMPO','TEMPT','TENDS','TENET','TENOR','TENSE','TENTH','TENTS','TEPID','TERMS','TERNS','TERRA','TERSE','TESTY','THANK','THEFT','THEIR','THEME','THERE','THERM','THESE','THETA','THICK','THIEF','THIGH','THINE','THING','THINK','THINS','THIRD','THOLE','THONG','THORN','THOSE','THREE','THREW','THROB','THROE','THROW','THRUM','THUMP','THYME','TIARA','TIBIA','TICKS','TIDAL','TIDED','TIGER','TIGHT','TILDE','TILED','TILER','TILES','TILTH','TIMED','TIMER','TIMES','TIMID','TINCT','TINEA','TINES','TINGE','TINNY','TINTS','TIPPY','TIPSY','TIRED','TITAN','TITLE','TOADS','TOADY','TOAST','TODAY','TOFFY','TOGAS','TOKEN','TOLLS','TOMAT','TOMBS','TOMED','TOMMY','TONAL','TONED','TONER','TONES','TONGA','TONGS','TONIC','TONNE','TOOLS','TOOTH','TOOTS','TOPAZ','TOPIC','TOQUE','TORAH','TORCH','TORSK','TORSO','TOTAL','TOTEM','TOUCH','TOUGH','TOURS','TOWEL','TOWER','TOWNS','TOXIC','TOXIN','TOYED','TRACE','TRACK','TRACT','TRADE','TRAIL','TRAIN','TRAIT','TRAMP','TRAPS','TRASH','TRAWL','TREAD','TREAT','TREED','TREES','TREKS','TREND','TRESS','TRIAD','TRIAL','TRIBE','TRICE','TRICK','TRIED','TRIER','TRILL','TRIMS','TRIOL','TRIOS','TRIPE','TRIPS','TRITE','TROLL','TROOP','TROPE','TROTS','TROUT','TROVE','TRUCE','TRUCK','TRUER','TRULY','TRUMP','TRUNK','TRUSS','TRUST','TRUTH','TRYST','TUBAL','TUBAS','TUBED','TUBES','TULIP','TULLE','TUMMY','TUMOR','TUNAS','TUNED','TUNER','TUNES','TUNIC','TURBO','TURFS','TURNS','TUSKS','TUTOR','TWAIN','TWANG','TWEAK','TWEED','TWEEN','TWICE','TWIGS','TWILL','TWINE','TWINS','TWIRL','TWIST','TWITS','TYPED','TYPES','ULCER','ULTRA','UMBRA','UNARM','UNARY','UNBAR','UNBED','UNBID','UNBIT','UNBOW','UNBOX','UNCLE','UNCUT','UNDER','UNDID','UNFED','UNFIT','UNFIX','UNFUR','UNHIP','UNIFY','UNION','UNITE','UNITS','UNITY','UNJAM','UNLAW','UNLAY','UNLED','UNLIT','UNMAN','UNMET','UNPAY','UNPEG','UNPIN','UNRIG','UNRIP','UNSAY','UNSET','UNSEW','UNSEX','UNSIN','UNTIE','UNTIL','UNWED','UNWIG','UNZIP','UPEND','UPPER','UPSET','URBAN','URGED','URGER','URINE','USAGE','USERS','USHER','USUAL','USURP','UTERI','UTILE','UTMOST','UTOPIA','UTTER','VACANT','VACATE','VACUUM','VAGUE','VAINLY','VALETS','VALID','VALLEY','VALORS','VALUED','VALUER','VALUES','VALVED','VALVES','VAMOSE','VANDAL','VANITY','VAPID','VAPORS','VARIED','VARIES','VASSAL','VASTLY','VAULTS','VECTOR','VEERED','VEGANS','VEILED','VELDTS','VELVET','VENDOR','VENEER','VENIAL','VENIRE','VENOM','VENOUS','VENTED','VENTER','VENUES','VERBAL','VERBEN','VERGED','VERGER','VERIFY','VERILY','VERITY','VERNAL','VERSED','VERSES','VERSUS','VERTEX','VESSEL','VESTAL','VESTED','VETOED','VETTED','VEXED','VIABLE','VIABLY','VIALS','VIATIC','VICARS','VICERO','VICES','VICTIM','VICTOR','VICUNA','VIDEOS','VIEWED','VIEWER','VIGILS','VIGOR','VIKING','VILELY','VILIFY','VILLAE','VILLAS','VINERY','VINTED','VIOLAS','VIOLET','VIOLIN','VIPERS','VIRAGO','VIRGIN','VIRILE','VIRION','VIROID','VIRTUE','VIRUS','VISAED','VISAGE','VISCID','VISION','VISITS','VISTAS','VISUAL','VITALS','VIVID','VIXENS','VIZIER','VOCALS','VODKAS','VOGUES','VOICED','VOICES','VOIDED','VOIDER','VOLANT','VOLUME','VOLUTE','VOLVED','VOMITS','VORTEX','VOTARY','VOTERS','VOTIVE','VOWELS','VOWING','VOYAGE','VOYEUR','VULGAR','VULGUS','WACKED','WACKER','WADDED','WADDLE','WAFERS','WAFFLE','WAFTED','WAGERS','WAGGED','WAGGLE','WAGONS','WAILED','WAILER','WAISTS','WAITED','WAITER','WAIVES','WAKENS','WAKING','WALKED','WALKER','WALLED','WALLET','WALLOW','WALNUT','WALRUS','WALTZ','WANDER','WANING','WANKED','WANKER','WANTED','WANTON','WARBLE','WARDEN','WARDER','WARILY','WARMED','WARMER','WARMTH','WARNED','WARNER','WARPED','WARPER','WARREN','WARSAW','WARTED','WASHED','WASHER','WASHES','WASTED','WASTER','WASTES','WATERY','WAUKED','WAVERS','WAVING','WAXING','WAYLAY','WEAKEN','WEAKER','WEAKLY','WEALTH','WEAPON','WEARER','WEASEL','WEAVED','WEAVER','WEAVES','WEDDED','WEDGED','WEDGES','WEEDED','WEEDER','WEEKLY','WEENIE','WEEPED','WEEPER','WEEVIL','WEIGHT','WEIRDO','WEIRDS','WELDED','WELDER','WELLED','WELTED','WELTER','WENCH','WESTER','WETHER','WETTED','WETTER','WHACKS','WHALES','WHARFS','WHEALS','WHEATS','WHEELS','WHEEZE','WHEEZY','WHELKS','WHELPS','WHENCE','WHERES','WHERRY','WHIFFS','WHILED','WHILES','WHIMSY','WHINED','WHINER','WHINES','WHINNY','WHIPED','WHIPPY','WHIRLS','WHISKS','WHISKY','WHISPS','WHIST','WHITED','WHITEN','WHITER','WHITES','WHOLE','WHOLLY','WHOOPS','WHOOSH','WICKED','WICKER','WICKET','WIDDLE','WIDELY','WIDEN','WIDENED','WIDER','WIDGET','WIDOW','WIDTH','WIELD','WIELDS','WIFELY','WIGGED','WIGGLE','WIGGLY','WILDLY','WILFUL','WILING','WILLED','WILLOW','WILTED','WIMBLE','WIMPLE','WINCED','WINCES','WINDED','WINDER','WINDLE','WINDOW','WINDUP','WINERY','WINGED','WINGER','WINKED','WINKER','WINKLE','WINNOW','WINTER','WINTLE','WIPERS','WIRILY','WIRING','WISDOM','WISELY','WISEST','WISPED','WITHIN','WIZARD','WIZEN','WOBBLE','WOBBLY','WOEFUL','WOLFED','WOLFER','WOLVES','WOMAN','WOMBAT','WONDER','WONNED','WONTED','WOODED','WOODEN','WOOFED','WOOFER','WOOLEN','WOOLLY','WORDED','WORKED','WORKER','WORLD','WORMED','WORMER','WORRY','WORSE','WORSHIP','WORST','WORTH','WORTHY','WOULD','WOUND','WOVEN','WRACK','WRAITH','WRAP','WRAPPED','WRASSE','WRATH','WREAK','WRECK','WRECKS','WRENCH','WREST','WRESTLE','WRETCH','WRIGHT','WRING','WRIST','WRITE','WRITER','WRITHE','WRITING','WRITTEN','WRONG','WROTE','WROTH','WRUNG','WUDDED','WUSSES','XENIAL','XYLENE','XYLOSE','XYSTER','XYSTOS','XYSTUS','YACHTS','YAHOOD','YAKUZA','YAMALK','YAMMER','YANKEE','YANQUI','YAPPED','YARROW','YATTER','YAUPED','YAUPON','YAWING','YAWLED','YAWPER','YEANED','YEARLY','YEARNED','YEASTY','YELLED','YELLOW','YELPED','YELPER','YENNED','YERKED','YESHIV','YIDDED','YIELD','YIELDS','YIPPED','YIPPEE','YIPPIE','YODELS','YODLED','YODLER','YOGURT','YOKING','YOLKED','YONDER','YORKED','YORKER','YOURS','YOUTH','YOUTHS','YOWLED','YUAN','YUCCA','YUCKED','YUKATA','YUMMIE','YURT','ZAFTIG','ZAKAT','ZANANA','ZANDER','ZANIEST','ZANY','ZAPPER','ZAREBA','ZEALOT','ZENITH','ZEPHYR','ZEROES','ZESTS','ZESTY','ZETA','ZIGZAG','ZILCH','ZINC','ZINGED','ZINGER','ZIPPER','ZIPPO','ZIPPY','ZIRAM','ZITHER','ZODIAC','ZOMBIE','ZONAL','ZONED','ZONES','ZONING','ZOOLOG','ZOOMED','ZORILLA','ZOSTER','ZOUNDS','ZUCCHI','ZUCCHINI','ZYGOTE','ZZZ','ABANDON','BROTHER','CITIZEN','CONTROL','DAZZLE','ECLIPSE','FANTASTIC','GALAXY','HORIZON','ISOLATE','JUBILANT','KALEIDOSCOPE','LUMINESCENT','MONUMENT','NEBULA','OBSIDIAN','PUZZLE','QUASAR','RADIANT','SUBLIME','TWINKLE','UNIVERSE','VOYAGE','WONDER','XYLOPHONE','YUMMY','ZEPHYR'];
+
+// ===== 游戏 =====
+let enemies=[],kills=0,explosions=[];
+let score=0,lives=99,level=1,run=false,over=false;
+const GOAL=50;
+
+function getPool(n){return POOL[n]||POOL[5];}
+
+function startGame(lvl){
+  level=lvl||parseInt(document.getElementById('lvSel').value);
+  document.getElementById('lvSel').value=level;
+  enemies=[];score=0;lives=99;kills=0;over=false;run=true;
+  sD.textContent='0';lD.textContent='99';lvD.textContent=level;pD.textContent='0/50';
+  document.getElementById('sBtn').textContent='🔄 重开';
+  st.textContent=`🚀 第${level}关开始！按字母消灭敌人！`;
+  document.activeElement&&document.activeElement.blur();
 }
-resize();window.addEventListener('resize',resize);
-
-// ===== GAME STATE =====
-var G={state:'menu',level:1,score:0,lives:99,maxLevel:9,mx:c.width/2,my:c.height-80,clicked:false,frame:0};
-function gw(l){return Math.min(10,Math.floor(l/10)+1)}
-function gwc(l){var a=[{c:1,s:0,d:10,sp:8,l:'单发'},{c:2,s:7,d:10,sp:8,l:'双发'},{c:3,s:9,d:10,sp:9,l:'三发'},{c:3,s:11,d:7,sp:10,l:'速射'},{c:5,s:13,d:9,sp:10,l:'散弹'},{c:5,s:15,d:6,sp:11,l:'散速'},{c:7,s:17,d:7,sp:12,l:'烈焰'},{c:7,s:19,d:5,sp:13,l:'烈速'},{c:9,s:21,d:5,sp:14,l:'星辰'},{c:11,s:23,d:4,sp:15,l:'耀斑'}];return a[Math.min(l-1,a.length-1)];}
-function glc(l){
-  var a=[{},
-    {e:6,sp:1.0,fr:150,sr:150,sm:5,bh:0,sc:100,ba:0,la:'初入星空'},
-    {e:8,sp:1.3,fr:130,sr:130,sm:6,bh:0,sc:200,ba:0,la:'陨石带'},
-    {e:10,sp:1.6,fr:110,sr:110,sm:7,bh:0,sc:300,ba:0,la:'暗夜巡逻'},
-    {e:10,sp:1.9,fr:95,sr:95,sm:8,bh:0,sc:400,ba:0,la:'敌方前哨'},
-    {e:12,sp:2.4,fr:75,sr:75,sm:10,bh:0,sc:600,ba:0,la:'穿越火线'},
-    {e:14,sp:2.6,fr:68,sr:68,sm:11,bh:0,sc:700,ba:0,la:'星际风暴'},
-    {e:14,sp:2.9,fr:60,sr:60,sm:12,bh:0,sc:800,ba:0,la:'死亡星域'},
-    {e:16,sp:3.1,fr:52,sr:52,sm:13,bh:0,sc:900,ba:0,la:'终极挑战'},
-    {e:12,sp:3.5,fr:45,sr:45,sm:20,bh:5,sc:1000,ba:1,la:'⭐最终之战'}
-  ];
-  return a[l]||a[1];
+function doStart(){
+  if(over&&kills>=GOAL){
+    document.removeEventListener('keydown',nextHandler);
+    if(level<5)startGame(level+1);
+    else{st.textContent='🎉🎊 全部通关！🎊🎉';run=false;}
+  }else startGame();
 }
 
-var player={x:c.width/2,y:c.height-80,w:40,h:40,cd:0};
-var bullets=[],enemies=[],ebullets=[],particles=[],boss=null;
-var stars=[];
-for(var i=0;i<100;i++)stars.push({x:Math.random()*c.width,y:Math.random()*c.height,sz:Math.random()*2+0.5,sp:Math.random()*1.2+0.3});
-var killCount=0; // enemies killed in current level
-
-function rc(a,b){return a.x-a.w/2<b.x+b.w/2&&a.x+a.w/2>b.x-b.w/2&&a.y-a.h/2<b.y+b.h/2&&a.y+a.h/2>b.y-b.h/2;}
-function se(){var cfg=glc(G.level);if(enemies.length<cfg.sm)enemies.push({x:Math.random()*(c.width-60)+30,y:-30,w:30,h:30,hp:1,sp:cfg.sp+Math.random()*0.5,ft:Math.floor(Math.random()*cfg.fr)});}
-function sb(){var cfg=glc(G.level);boss={x:c.width/2,y:-60,w:80,h:60,hp:cfg.bh,mh:cfg.bh,sp:1.2,dir:1,ft:0,hf:0};}
-function ap(x,y,col,n){for(var i=0;i<n;i++){var a=Math.random()*6.28,s=Math.random()*3+1;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:30+Math.random()*20,ml:50,col,sz:Math.random()*4+2});}}
-
-function il(l, preserveWpn){
-  if(!preserveWpn){
-    G.level=l;G.score=0;
-  }else{
-    var wl=gw(G.score);
-    G.level=l;
-    G.score=Math.max(0,(wl-1)*10);
+function nextHandler(e){
+  const k=e.key.toUpperCase();
+  if(k.length===1||e.key==='Enter'){
+    e.preventDefault();
+    document.removeEventListener('keydown',nextHandler);
+    if(level<5){startGame(level+1);}
+    else{st.textContent='🎉🎊 全部通关！你是打字大师！🎊🎉';run=false;}
   }
-  killCount=0; // reset kill counter
-  bullets=[];enemies=[];ebullets=[];particles=[];boss=null;
-  player.x=G.mx;player.y=Math.min(G.my,c.height-30);
-  var cfg=glc(l);
-  for(var i=0;i<Math.min(cfg.ba?2:3,cfg.sm);i++)se();
-  G.state='playing';
+}
+
+document.addEventListener('keydown',e=>{
+  const k=e.key.toUpperCase();
+  if(k.length===1&&k>='A'&&k<='Z'){
+    e.preventDefault();
+    if(!run)startGame();
+    fire(k);
+  }
+  if(e.key==='Enter'&&!run)startGame();
+});
+
+function fire(ch){
+  if(!run||over)return;
+  let best=null,bi=-1;
+  for(let i=0;i<enemies.length;i++){
+    const e=enemies[i];
+    if(e.word[e.typed.length]===ch){best=e;bi=i;break;}
+  }
+  if(best){
+    best.typed+=ch;
+    if(best.typed===best.word){
+      kills++;score++;kills++;
+      sD.textContent=score;pD.textContent=`${kills}/${GOAL}`;
+      enemies.splice(bi,1);
+      if(kills>=GOAL){
+        st.textContent=`🎉🎊 第${level}关通关！太棒了！按任意键进入下一关 🎊🎉`;
+        over=true;run=false;
+        document.getElementById('sBtn').textContent='▶ 下一关';
+        // 庆祝爆炸
+        for(let i=0;i<30;i++){
+          setTimeout(()=>{
+            explosions.push({
+              x:100+Math.random()*(W-200),y:50+Math.random()*(H-100),
+              r:20+Math.random()*40,t:30+Math.random()*20,
+              c:['#00f5ff','#a855f7','#ff6bcb','#ffd54f','#4caf50'][Math.floor(Math.random()*5)]
+            });
+          },i*80);
+        }
+        document.addEventListener('keydown',nextHandler);
+        return;
+      }
+      st.textContent=`已消灭${kills}/${GOAL} +1分 👍`;
+    }
+  }
 }
 
 function update(){
-  G.frame++;if(G.state!=='playing')return;
-  var cfg=glc(G.level);
-  player.x=G.mx;player.y=Math.min(G.my,c.height-30);
-  
-  if(G.clicked){
-    if(player.cd<=0){
-      var wl=gw(G.score),c2=gwc(wl);
-      for(var i=0;i<c2.c;i++){var off=(i-(c2.c-1)/2)*c2.s;bullets.push({x:player.x+off,y:player.y-20,w:4,h:12,sp:c2.sp});}
-      player.cd=c2.d;
-      playShot(); // bullet sound
+  if(!run||over)return;
+  const mx=Math.min(2+Math.floor(level/3),3); // 最多2-3个
+  if(enemies.length<mx&&Math.random()<.02){ // 降低生成率
+    const pool=getPool(level);
+    const w=pool[Math.floor(Math.random()*pool.length)];
+    if(!enemies.find(e=>e.word===w)){
+      const sp=level<=1?.6:level===2?.5:.35+level*.04;
+      enemies.push({word:w,typed:'',x:40+Math.random()*(W-80),y:-40,speed:sp});
     }
   }
-  if(player.cd>0)player.cd--;
-  
-  for(var i=bullets.length-1;i>=0;i--){
-    bullets[i].y-=bullets[i].sp;
-    if(bullets[i].y<-20){bullets.splice(i,1);continue;}
-    var hit=false;
-    for(var j=enemies.length-1;j>=0;j--){
-      if(rc(bullets[i],enemies[j])){ap(enemies[j].x,enemies[j].y,'#f5a623',10);enemies.splice(j,1);G.score+=10;killCount++;hit=true;break;}
-    }
-    if(hit){bullets.splice(i,1);continue;}
-    if(boss&&rc(bullets[i],boss)){boss.hp--;boss.hf=8;ap(bullets[i].x,bullets[i].y,'#e74c3c',5);bullets.splice(i,1);G.score+=5;if(boss.hp<=0){ap(boss.x,boss.y,'#e74c3c',40);boss=null;G.score+=50;killCount++;}continue;}
-  }
-  
-  // Normal enemy spawning
-  if(G.frame%cfg.sr===0&&enemies.length<cfg.sm)se();
-  // Boss level: spawn boss when ready
-  if(cfg.ba&&!boss&&enemies.length===0&&G.frame>120)sb();
-  // After boss dies, respawn enemies if still need kills
-  if(cfg.ba&&!boss&&killCount<20){
-    if(G.frame%60===0&&enemies.length<cfg.sm)se();
-  }
-  
-  for(var i=enemies.length-1;i>=0;i--){
-    var e=enemies[i];e.y+=e.sp;
-    e.ft--;if(e.ft<=0&&e.y>20){ebullets.push({x:e.x,y:e.y+15,w:4,h:6,sp:3});e.ft=cfg.fr+Math.floor(Math.random()*30);}
-    if(e.y>c.height+40){enemies.splice(i,1);continue;}
-    if(rc(e,player)){
-      ap(e.x,e.y,'#f5a623',15);enemies.splice(i,1);
-      hitPlayer();
-    }
-  }
-  
-  // Enemy passes defense line (bottom of screen)
-  for(var i=enemies.length-1;i>=0;i--){
-    var e=enemies[i];
-    if(e.y>c.height+20){
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];e.y+=e.speed;
+    if(e.y>H+10){
+      score--;lives--;
+      sD.textContent=Math.max(0,score);lD.textContent=Math.max(0,lives);
       enemies.splice(i,1);
-      hitPlayer();
+      if(lives<=0){over=true;st.textContent='💀 游戏结束！生命耗尽';run=false;document.getElementById('sBtn').textContent='🚀 重新挑战';}
     }
-  }
-  
-  for(var i=ebullets.length-1;i>=0;i--){
-    var eb=ebullets[i];eb.y+=eb.sp;
-    if(eb.y>c.height+20){ebullets.splice(i,1);continue;}
-    if(rc(eb,player)){
-      ap(player.x,player.y,'#4a7cf7',10);ebullets.splice(i,1);
-      hitPlayer();
-    }
-  }
-  
-  if(boss){
-    // Boss movement varies by level
-    if(G.level===5){
-      // Level 5: sine wave pattern
-      boss.x+=boss.sp*boss.dir;
-      if(boss.x>c.width-60||boss.x<60)boss.dir*=-1;
-      boss.y+=Math.sin(G.frame*0.03)*0.8;
-      if(boss.y<40)boss.y=40;if(boss.y>120)boss.y=120;
-    } else if(G.level===8){
-      // Level 8: fast dash + pause
-      if(G.frame%120<80){
-        boss.x+=boss.sp*2.5*boss.dir;
-        if(boss.x>c.width-60||boss.x<60)boss.dir*=-1;
-      }
-      if(boss.y<60)boss.y+=0.8;
-    } else {
-      // Level 10: complex zigzag
-      boss.x+=boss.sp*1.8*boss.dir;
-      if(boss.x>c.width-60||boss.x<60)boss.dir*=-1;
-      boss.y+=Math.sin(G.frame*0.05)*1.2;
-      if(boss.y<30)boss.y=30;if(boss.y>130)boss.y=130;
-    }
-    if(boss.hf>0)boss.hf--;
-    boss.ft--;
-    if(boss.ft<=0){for(var a=-1;a<=1;a++)ebullets.push({x:boss.x+a*20,y:boss.y+30,w:5,h:8,sp:3.5});boss.ft=40;}
-    if(rc(boss,player)){ap(boss.x,boss.y,'#e74c3c',20);G.lives-=2;if(G.lives<=0)G.state='gameOver';}
-  }
-  
-  for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1);}
-  
-  // Win / Level clear
-  if(G.level===G.maxLevel&&G.score>=10000){celebrate();G.state='win';return;}
-  if(!cfg.ba&&G.level<G.maxLevel){
-    if(killCount>=20&&enemies.length===0&&G.frame>120){celebrate();G.state='levelClear';return;}
-  }else{
-    if(!boss&&enemies.length===0&&G.frame>180&&killCount>=20){celebrate();G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
-  }
-}
-
-// ===== Hit Player ======
-function celebrate(){
-  // Victory celebration particles
-  for(var i=0;i<60;i++){
-    var a=Math.random()*6.28,s=Math.random()*5+2;
-    var col=['#f5a623','#4a7cf7','#27ae60','#e74c3c','#fff','#8e44ad'][Math.floor(Math.random()*6)];
-    particles.push({x:c.width/2+Math.random()*c.width*0.6-c.width*0.3,
-      y:c.height/2+Math.random()*c.height*0.4-c.height*0.2,
-      vx:Math.cos(a)*s,vy:Math.sin(a)*s,
-      life:60+Math.random()*40,ml:100,col:col,sz:Math.random()*6+3});
-  }
-  // Try to play a victory sound
-  try{
-    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended')audioCtx.resume();
-    var notes=[523,659,784,1047];
-    for(var i=0;i<notes.length;i++){
-      var osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
-      osc.connect(gain);gain.connect(audioCtx.destination);
-      osc.type='square';osc.frequency.value=notes[i];
-      gain.gain.setValueAtTime(0.06,audioCtx.currentTime+i*0.12);
-      gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+i*0.12+0.1);
-      osc.start(audioCtx.currentTime+i*0.12);osc.stop(audioCtx.currentTime+i*0.12+0.1);
-    }
-  }catch(e){}
-}
-function hitPlayer(){
-  var wl=gw(G.score);
-  if(wl>1){
-    // 被击中不削减分数，仅降低武器等级
-    var newScore=Math.max(0,(wl-2)*10);
-    G.score=Math.max(G.score-10,0);
-    ap(player.x,player.y,'#ff6b6b',8);
-  }else{
-    G.lives--;
-    ap(player.x,player.y,'#e74c3c',12);
-    if(G.lives<=0)G.state='gameOver';
   }
 }
 
 function draw(){
-  ctx.fillStyle='#000';ctx.fillRect(0,0,c.width,c.height);
-  stars.forEach(function(s){s.y+=s.sp;if(s.y>c.height){s.y=0;s.x=Math.random()*c.width;}ctx.fillStyle='rgba(255,255,255,'+(0.3+Math.random()*0.5)+')';ctx.fillRect(s.x,s.y,s.sz,s.sz);});
-  var fs=Math.min(c.width/16,36);
-  
-  if(G.state==='menu'){
-    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,c.width,c.height);
-    ctx.fillStyle='#fff';ctx.font='bold '+fs+'px Microsoft YaHei';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('🚀 星空大战',c.width/2,c.height*0.22);
-    ctx.font=(fs*0.4)+'px Microsoft YaHei';ctx.fillStyle='#8895b0';
-    ctx.fillText('9关闯关 · 击杀20个小兵过关 · Boss战 · 武器升级',c.width/2,c.height*0.33);
-    ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.35)+'px Microsoft YaHei';
-    ctx.fillText('触屏滑动控制 · 按住开火',c.width/2,c.height*0.44);
-    ctx.fillStyle='#f5a623';ctx.font=(fs*0.3)+'px Microsoft YaHei';
-    ctx.fillText('⚡ 被击中武器会降级，小心操作！',c.width/2,c.height*0.51);
-    // Level selection grid
-    ctx.textBaseline='middle';
-    var gridY=c.height*0.56,gridH=c.height*0.32,btnW=c.width*0.085,btnH=gridH*0.42,gap=c.width*0.005;
-    var gridW=btnW*9+gap*8;
-    var startX=(c.width-gridW)/2;
-    ctx.textAlign='center';
-    for(var i=0;i<9;i++){
-      var bx=startX+i*(btnW+gap),by=gridY;
-      var col=i<5?'#4a7cf7':'#8e44ad';
-      ctx.fillStyle='rgba(0,0,0,.4)';
-      ctx.fillRect(bx-2,by-2,btnW+4,btnH+4);
-      ctx.fillStyle=col;
-      ctx.fillRect(bx,by,btnW,btnH);
-      ctx.fillStyle='#fff';ctx.font='bold '+(fs*0.2)+'px Microsoft YaHei';
-      ctx.fillText(glc(i+1).la||'第'+(i+1)+'关',bx+btnW/2,by+btnH*0.35);
-      ctx.font=(fs*0.13)+'px Microsoft YaHei';
-      ctx.fillStyle='rgba(255,255,255,.5)';
-      ctx.fillText('第'+(i+1)+'关',bx+btnW/2,by+btnH*0.75);
-      // Boss badge
-      if(i+1===5||i+1===8){
-        ctx.fillStyle='rgba(231,76,60,.8)';ctx.font='bold '+(fs*0.13)+'px Microsoft YaHei';
-        ctx.fillText('🐉',bx+btnW-12,by+8);
-      }
-    }
-    ctx.fillStyle='#666';ctx.font=(fs*0.18)+'px Microsoft YaHei';ctx.textAlign='center';
-    ctx.fillText('点击上方关卡直接挑战 | 点击空白处从第1关开始',c.width/2,c.height*0.91);
-    // Compliance notice - prominent
-    ctx.textBaseline='bottom';
-    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(c.width*0.05,c.height-66,c.width*0.9,56);
-    ctx.fillStyle='rgba(255,80,80,.5)';ctx.font='bold '+(fs*0.28)+'px Microsoft YaHei';ctx.textAlign='center';
-    ctx.fillText('【健康游戏忠告】',c.width/2,c.height-24);
-    ctx.fillStyle='rgba(255,255,255,.35)';ctx.font=(fs*0.22)+'px Microsoft YaHei';
-    ctx.fillText('抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。',c.width/2,c.height-46);
-    ctx.fillText('适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。',c.width/2,c.height-68);
-    return;
-  }
-  if(G.state==='gameOver'){
-    ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,c.width,c.height);
-    ctx.fillStyle='#e74c3c';ctx.font='bold '+fs+'px Microsoft YaHei';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('💀 游戏结束',c.width/2,c.height*0.28);
-    ctx.fillStyle='#fff';ctx.font=(fs*0.45)+'px Microsoft YaHei';
-    ctx.fillText('得分: '+G.score,c.width/2,c.height*0.40);
-    ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.32)+'px Microsoft YaHei';
-    ctx.fillText('点击重新开始',c.width/2,c.height*0.55);
-    ctx.fillStyle='#666';ctx.font=(fs*0.22)+'px Microsoft YaHei';
-    ctx.fillText('适度游戏益脑，沉迷游戏伤身',c.width/2,c.height*0.70);
-    return;
-  }
-  if(G.state==='levelClear'){
-    ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,c.width,c.height);
-    ctx.fillStyle='#f5a623';ctx.font='bold '+(fs*0.85)+'px Microsoft YaHei';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('🎯 第'+G.level+'关通过！',c.width/2,c.height*0.30);
-    var nl=glc(G.level+1);
-    ctx.fillStyle='#fff';ctx.font=(fs*0.38)+'px Microsoft YaHei';
-    ctx.fillText('下一关: '+nl.la+' | 得分: '+G.score,c.width/2,c.height*0.42);
-    ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.32)+'px Microsoft YaHei';
-    ctx.fillText('点击进入下一关',c.width/2,c.height*0.55);
-    return;
-  }
-  if(G.state==='win'){
-    ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,c.width,c.height);
-    ctx.fillStyle='#f5a623';ctx.font='bold '+(fs*0.85)+'px Microsoft YaHei';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('🎉 恭喜通关全部9关！',c.width/2,c.height*0.28);
-    ctx.fillStyle='#fff';ctx.font=(fs*0.45)+'px Microsoft YaHei';
-    ctx.fillText('总得分: '+G.score,c.width/2,c.height*0.40);
-    ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.32)+'px Microsoft YaHei';
-    ctx.fillText('点击重新开始',c.width/2,c.height*0.55);
-    return;
-  }
-  
-  // HUD
-  var wl=gw(G.score),wc=gwc(wl);
-  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,c.width,28);
-  ctx.fillStyle='#fff';ctx.font='13px Microsoft YaHei';ctx.textAlign='left';
-  ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+(glc(G.level).la||'')+' 第'+G.level+'关',10,20);
-  // Back to menu button
-  ctx.textAlign='right';
-  ctx.fillStyle='rgba(74,124,247,.2)';ctx.fillRect(c.width-70,4,64,22);
-  ctx.strokeStyle='rgba(74,124,247,.4)';ctx.lineWidth=0.5;ctx.strokeRect(c.width-70,4,64,22);
-  ctx.fillStyle='rgba(74,124,247,.8)';ctx.font='12px Microsoft YaHei';
-  ctx.fillText('🏠 主页',c.width-8,20);
-  
-  // Player
-  var ps=Math.min(c.width/22,20);
-  ctx.shadowColor='#4a7cf7';ctx.shadowBlur=15;
-  ctx.fillStyle='#4a7cf7';
-  ctx.beginPath();ctx.moveTo(player.x,player.y-ps);ctx.lineTo(player.x-ps*0.8,player.y+ps*0.6);ctx.lineTo(player.x-ps*0.25,player.y+ps*0.25);ctx.lineTo(player.x,player.y+ps*0.6);ctx.lineTo(player.x+ps*0.25,player.y+ps*0.25);ctx.lineTo(player.x+ps*0.8,player.y+ps*0.6);ctx.closePath();ctx.fill();
-  ctx.shadowBlur=20;ctx.fillStyle='#f5a623';
-  ctx.beginPath();ctx.moveTo(player.x-ps*0.25,player.y+ps*0.5);ctx.lineTo(player.x,player.y+ps+Math.random()*ps*0.25);ctx.lineTo(player.x+ps*0.25,player.y+ps*0.5);ctx.fill();
-  ctx.shadowBlur=0;
-  
-  ctx.fillStyle='#f5a623';ctx.shadowColor='#f5a623';ctx.shadowBlur=6;
-  bullets.forEach(function(b){ctx.fillRect(b.x-2,b.y-6,4,12);});
-  ctx.shadowBlur=0;
-  
-  enemies.forEach(function(e){
-    ctx.shadowColor='#e74c3c';ctx.shadowBlur=8;ctx.fillStyle='#e74c3c';
-    ctx.beginPath();ctx.moveTo(e.x,e.y+14);ctx.lineTo(e.x-14,e.y-7);ctx.lineTo(e.x-5,e.y-3);ctx.lineTo(e.x,e.y-12);ctx.lineTo(e.x+5,e.y-3);ctx.lineTo(e.x+14,e.y-7);ctx.closePath();ctx.fill();
-    ctx.shadowBlur=0;ctx.fillStyle='#fff';
-    ctx.fillRect(e.x-5,e.y-1,3,3);ctx.fillRect(e.x+2,e.y-1,3,3);
-  });
-  ctx.shadowBlur=0;
-  ebullets.forEach(function(b){ctx.fillStyle='#ff6b6b';ctx.shadowColor='#ff6b6b';ctx.shadowBlur=4;ctx.fillRect(b.x-2,b.y-3,4,6);});
-  ctx.shadowBlur=0;
-  
-  // Boss - 3 different forms based on level
-  if(boss){
-    var bx=boss.x,by=boss.y;
-    ctx.shadowColor='#e74c3c';ctx.shadowBlur=18;
+  GX.clearRect(0,0,W,H);
+  GX.strokeStyle='rgba(168,85,247,.04)';GX.lineWidth=.5;
+  for(let x=0;x<W;x+=40){GX.beginPath();GX.moveTo(x,0);GX.lineTo(x,H);GX.stroke();}
+  for(let y=0;y<H;y+=40){GX.beginPath();GX.moveTo(0,y);GX.lineTo(W,y);GX.stroke();}
+  for(const e of enemies){
+    const cx=e.x,cy=e.y;
+    // 光晕
+    const gg=GX.createRadialGradient(cx,cy,0,cx,cy,50);
+    gg.addColorStop(0,'rgba(255,50,100,.08)');gg.addColorStop(1,'transparent');
+    GX.fillStyle=gg;GX.beginPath();GX.arc(cx,cy,50,0,Math.PI*2);GX.fill();
     
-    // Boss form depends on level
-    if(G.level===5){
-      // Level 5: Triangular warship (绿色)
-      ctx.fillStyle=boss.hf>0?'#fff':'#27ae60';
-      ctx.beginPath();
-      ctx.moveTo(bx,by-34);ctx.lineTo(bx-40,by+20);ctx.lineTo(bx-28,by+16);ctx.lineTo(bx-14,by+28);
-      ctx.lineTo(bx-6,by+10);ctx.lineTo(bx+6,by+10);ctx.lineTo(bx+14,by+28);
-      ctx.lineTo(bx+28,by+16);ctx.lineTo(bx+40,by+20);ctx.closePath();ctx.fill();
-      ctx.fillStyle='#e74c3c';ctx.shadowColor='#e74c3c';ctx.shadowBlur=8;
-      ctx.fillRect(bx-20,by-8,8,6);ctx.fillRect(bx+12,by-8,8,6);
-    } else if(G.level===8){
-      // Level 8: Diamond shape (紫色)
-      ctx.fillStyle=boss.hf>0?'#fff':'#8e44ad';
-      ctx.beginPath();
-      ctx.moveTo(bx,by-36);ctx.lineTo(bx-44,by-8);ctx.lineTo(bx-36,by+8);ctx.lineTo(bx-24,by-4);
-      ctx.lineTo(bx-16,by+24);ctx.lineTo(bx-8,by+14);ctx.lineTo(bx,by+30);
-      ctx.lineTo(bx+8,by+14);ctx.lineTo(bx+16,by+24);ctx.lineTo(bx+24,by-4);
-      ctx.lineTo(bx+36,by+8);ctx.lineTo(bx+44,by-8);ctx.closePath();ctx.fill();
-      ctx.fillStyle='#e74c3c';ctx.shadowColor='#e74c3c';ctx.shadowBlur=10;
-      ctx.fillRect(bx-18,by-16,8,8);ctx.fillRect(bx+10,by-16,8,8);
-      // Extra horns
-      ctx.fillStyle=boss.hf>0?'#fff':'#f39c12';
-      ctx.beginPath();ctx.moveTo(bx-10,by-36);ctx.lineTo(bx-18,by-50);ctx.lineTo(bx-4,by-42);ctx.closePath();ctx.fill();
-      ctx.beginPath();ctx.moveTo(bx+10,by-36);ctx.lineTo(bx+18,by-50);ctx.lineTo(bx+4,by-42);ctx.closePath();ctx.fill();
-    } else {
-      // Level 10: Final boss (红色巨舰)
-      ctx.fillStyle=boss.hf>0?'#fff':'#c0392b';
-      ctx.beginPath();
-      ctx.moveTo(bx,by-38);ctx.lineTo(bx-48,by-10);ctx.lineTo(bx-40,by+6);ctx.lineTo(bx-28,by-6);
-      ctx.lineTo(bx-20,by+22);ctx.lineTo(bx-10,by+12);ctx.lineTo(bx,by+32);
-      ctx.lineTo(bx+10,by+12);ctx.lineTo(bx+20,by+22);ctx.lineTo(bx+28,by-6);
-      ctx.lineTo(bx+40,by+6);ctx.lineTo(bx+48,by-10);ctx.closePath();ctx.fill();
-      // Red glowing eyes
-      ctx.shadowColor='#ff0000';ctx.shadowBlur=20;
-      ctx.fillStyle='#ff0000';
-      ctx.fillRect(bx-22,by-14,10,10);ctx.fillRect(bx+12,by-14,10,10);
-      ctx.shadowBlur=0;
-      // Crown/crest
-      ctx.fillStyle='#f5a623';
-      for(var ci=-2;ci<=2;ci++){ctx.fillRect(bx+ci*8-2,by-46,4,10);}
-    }
-    ctx.shadowBlur=0;
-    // HP bar
-    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(bx-40,by-50,80,5);
-    ctx.fillStyle='#27ae60';ctx.fillRect(bx-40,by-50,80*(boss.hp/boss.mh),5);
-    ctx.strokeStyle='#fff';ctx.lineWidth=0.5;ctx.strokeRect(bx-40,by-50,80,5);
-  }
-  
-  particles.forEach(function(p){ctx.globalAlpha=p.life/p.ml;ctx.fillStyle=p.col;ctx.fillRect(p.x,p.y,p.sz*p.life/p.ml,p.sz*p.life/p.ml);});
-  ctx.globalAlpha=1;
-}
-
-function loop(){update();draw();requestAnimationFrame(loop)}
-
-// ===== MUSIC & SOUND =====
-var audioCtx=null,musicOn=false,musicNodes=null;
-function toggleMusic(){
-  musicOn=!musicOn;
-  document.getElementById('musicBtn').textContent=musicOn?'🔊 音乐':'🔇 音乐';
-  document.getElementById('musicBtn').classList.toggle('on',musicOn);
-  if(musicOn)startMusic();else stopMusic();
-}
-
-function playShot(){
-  try{
-    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended')audioCtx.resume();
-    var osc=audioCtx.createOscillator();
-    var gain=audioCtx.createGain();
-    osc.connect(gain);gain.connect(audioCtx.destination);
-    osc.type='square';osc.frequency.setValueAtTime(880,audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(440,audioCtx.currentTime+0.05);
-    gain.gain.setValueAtTime(0.08,audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.08);
-    osc.start(audioCtx.currentTime);osc.stop(audioCtx.currentTime+0.08);
-  }catch(e){}
-}
-
-function startMusic(){
-  try{
-    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended')audioCtx.resume();
+    // 敌人颜色按字母数变化
+    const hue=((e.word.length*30)+(e.word.charCodeAt(0)*10))%360;
+    const c1=`hsla(${hue},70%,50%,.2)`,c2=`hsla(${hue+30},80%,60%,.15)`;
+    const c3=`hsla(${hue+60},60%,70%,.35)`,c4=`hsla(${hue},70%,50%,.3)`;
     
-    // Epic melody - heroic/激昂 theme
-    var notes=[
-      523,659,784,1047, 784,659,784,1047,  // C E G C' G E G C'
-      784,880,1047,1175, 1047,880,784,659,  // G A C' D' C' A G E
-      659,784,880,659, 523,659,784,523,     // E G A E C E G C
-      784,880,1047,784, 659,523,392,330,    // G A C' G E C F E
-      392,440,523,660, 784,880,1047,784,    // F A C E G A C' G
-      523,659,784,988, 1047,880,784,659,    // C E G B C' A G E
-      784,1047,784,1047, 880,659,523,440,   // G C' G C' A E C F
-      523,660,784,1047, 1175,1047,880,784,  // C E G C' D' C' A G
-    ];
-    // Bass line (1 octave lower)
-    var bass=[];
-    for(var i=0;i<notes.length;i++)bass.push(notes[i]/2);
+    // 飞船体
+    GX.fillStyle=c1;GX.strokeStyle=c2;GX.lineWidth=1.5;
+    GX.beginPath();GX.ellipse(cx,cy,32,16,0,0,Math.PI*2);GX.fill();GX.stroke();
     
-    var bpm=150;
-    var noteLen=60/bpm/2;
-    var totalLen=notes.length*noteLen;
-    var bufSize=audioCtx.sampleRate*totalLen;
-    var buf=audioCtx.createBuffer(1,bufSize,audioCtx.sampleRate);
-    var data=buf.getChannelData(0);
+    // 驾驶舱
+    GX.fillStyle=c3;
+    GX.beginPath();GX.ellipse(cx,cy-3,14,8,0,0,Math.PI*2);GX.fill();
+    GX.fillStyle='rgba(255,255,255,.08)';
+    GX.beginPath();GX.ellipse(cx-3,cy-5,6,4,0,0,Math.PI*2);GX.fill();
     
-    for(var i=0;i<notes.length;i++){
-      var freq=notes[i];
-      var bf=bass[i];
-      var startSample=Math.floor(i*noteLen*audioCtx.sampleRate);
-      var endSample=Math.floor((i+1)*noteLen*audioCtx.sampleRate);
-      for(var s=startSample;s<endSample&&s<bufSize;s++){
-        var t=s/audioCtx.sampleRate;
-        var localT=t-i*noteLen;
-        var envelope=Math.max(0,1-localT/(noteLen*0.6));
-        // Square wave lead
-        data[s]+=(Math.sin(2*Math.PI*freq*t)>0?0.07:-0.07)*envelope;
-        // Third harmonic for richness
-        data[s]+=Math.sin(2*Math.PI*freq*2*t)*0.025*envelope;
-        data[s]+=Math.sin(2*Math.PI*freq*3*t)*0.015*envelope;
-        // Bass
-        data[s]+=(Math.sin(2*Math.PI*bf*t)>0?0.05:-0.05)*envelope*0.6;
-      }
-    }
+    // 机翼
+    GX.fillStyle=c4;
+    GX.beginPath();GX.moveTo(cx-26,cy-2);GX.lineTo(cx-34,cy+6);GX.lineTo(cx-26,cy+8);GX.closePath();GX.fill();
+    GX.beginPath();GX.moveTo(cx+26,cy-2);GX.lineTo(cx+34,cy+6);GX.lineTo(cx+26,cy+8);GX.closePath();GX.fill();
     
-    var source=audioCtx.createBufferSource();
-    source.buffer=buf;
-    source.loop=true;
-    source.connect(audioCtx.destination);
-    source.start();
-    musicNodes=source;
-  }catch(e){console.log('Music error:',e);}
-}
-
-function stopMusic(){
-  if(musicNodes){
-    try{musicNodes.stop();}catch(e){}
-    musicNodes=null;
+    // 推进器火焰
+    GX.fillStyle='rgba(255,200,50,.6)';
+    GX.beginPath();GX.moveTo(cx-10,cy+12);GX.lineTo(cx,cy+20);GX.lineTo(cx+10,cy+12);GX.closePath();GX.fill();
+    GX.fillStyle='rgba(255,100,50,.4)';
+    GX.beginPath();GX.moveTo(cx-6,cy+12);GX.lineTo(cx,cy+16);GX.lineTo(cx+6,cy+12);GX.closePath();GX.fill();
+    
+    // 飞船灯
+    GX.fillStyle=c3;GX.shadowColor=c3;GX.shadowBlur=6;
+    GX.beginPath();GX.arc(cx-12,cy+2,2.5,0,Math.PI*2);GX.fill();
+    GX.beginPath();GX.arc(cx+12,cy+2,2.5,0,Math.PI*2);GX.fill();
+    GX.beginPath();GX.arc(cx,cy+6,2,0,Math.PI*2);GX.fill();
+    GX.shadowBlur=0;
+    const sz=Math.max(16,22-e.word.length*.4);
+    GX.font=`bold ${sz}px 'Courier New',monospace`;GX.textAlign='center';
+    GX.fillStyle='rgba(255,107,203,.9)';
+    GX.fillText(e.typed,cx,cy-48);
+    GX.fillStyle='rgba(255,255,255,.35)';
+    GX.fillText(e.word.slice(e.typed.length),cx,cy-26);
+   }
+   // 爆炸
+   for(const ex of explosions){
+     GX.save();GX.globalAlpha=ex.t/25;
+     const g=GX.createRadialGradient(ex.x,ex.y,0,ex.x,ex.y,ex.r);
+     g.addColorStop(0,ex.c);g.addColorStop(.3,ex.c+'80');g.addColorStop(1,'transparent');
+     GX.fillStyle=g;GX.beginPath();GX.arc(ex.x,ex.y,ex.r,0,Math.PI*2);GX.fill();
+     GX.restore();
+   }
+   // 爆炸消退
+  for(const ex of explosions){ex.t--;}
+  explosions=explosions.filter(e=>e.t>0);
+  if(!run&&!over){
+    GX.fillStyle='rgba(0,0,0,.5)';GX.fillRect(0,0,W,H);
+    GX.fillStyle='rgba(255,255,255,.3)';
+    GX.font='bold 22px Orbitron,sans-serif';GX.textAlign='center';GX.textBaseline='middle';
+    GX.fillText('按字母键开始 ⌨',W/2,H/2);
   }
 }
 
-// ===== Input =====
-function gp(e){
-  var r=c.getBoundingClientRect();
-  var cx,cy;
-  if(e.touches){cx=e.touches[0].clientX;cy=e.touches[0].clientY;}
-  else{cx=e.clientX;cy=e.clientY;}
-  return {x:(cx-r.left)*(c.width/r.width),y:(cy-r.top)*(c.height/r.height)};
-}
-
-function hd(e){e.preventDefault();var p=gp(e);G.mx=p.x;G.my=p.y;
-  if(G.state==='gameOver'||G.state==='win'){G.score=0;G.lives=99;G.frame=0;il(1);return;}
-  if(G.state==='levelClear'){il(G.level+1,true);return;}
-  if(G.state==='menu'){
-    // Check if clicking on a level button (canvas coords)
-    var gw=c.width,gh=c.height;
-    var gridY=gh*0.56,btnW=gw*0.085,btnH=gh*0.134,gap=gw*0.005;
-    var gridW=btnW*9+gap*8,startX=(gw-gridW)/2;
-    for(var i=0;i<9;i++){
-      var bx=startX+i*(btnW+gap);
-      if(p.x>=bx&&p.x<=bx+btnW&&p.y>=gridY&&p.y<=gridY+btnH){
-        G.score=0;G.lives=99;G.frame=0;il(i+1);
-        return;
-      }
-    }
-    // Click elsewhere = start from level 1
-    G.score=0;G.lives=99;G.frame=0;il(1);
-    return;
-  }
-  if(G.state==='playing'){
-    // Check if clicking the "主页" button (top right corner)
-    if(p.x>=c.width-70&&p.x<=c.width-6&&p.y>=4&&p.y<=26){
-      G.state='menu';bullets=[];enemies=[];ebullets=[];particles=[];boss=null;
-      return;
-    }
-    G.clicked=true;
-  }
-}
-function hm(e){e.preventDefault();var p=gp(e);G.mx=p.x;G.my=p.y;}
-function hu(e){e.preventDefault();G.clicked=false;}
-
-c.addEventListener('mousedown',hd);c.addEventListener('mousemove',hm);c.addEventListener('mouseup',hu);c.addEventListener('mouseleave',function(){G.clicked=false});
-c.addEventListener('touchstart',hd);c.addEventListener('touchmove',hm);c.addEventListener('touchend',hu);c.addEventListener('touchcancel',function(){G.clicked=false});
-
+function loop(){update();draw();requestAnimationFrame(loop);}
 loop();
+
+// 音乐
+let AC,mp=false,GN,ONS=[];
+function initA(){if(AC)return;AC=new(window.AudioContext||window.webkitAudioContext)();GN=AC.createGain();GN.gain.value=.12;GN.connect(AC.destination);}
+function toggleM(){initA();mp=!mp;document.getElementById('mBtn').textContent=mp?'🔊':'🔇';if(mp)playM();else stopM();}
+function stopM(){for(const o of ONS){try{o.stop();o.disconnect();}catch(e){}}ONS=[];if(AC&&AC.state==='suspended')AC.resume();}
+function playM(){if(!mp||!AC)return;stopM();
+  const mel=[[262,.3],[330,.3],[392,.3],[523,.3],[392,.3],[330,.3],[294,.3],[330,.4],[349,.3],[440,.3],[523,.3],[659,.4],[523,.3],[440,.3],[392,.4],[330,.3],[294,.3],[349,.3],[440,.5],[392,.3],[349,.3],[330,.4],[262,.3],[294,.3],[330,.3],[392,.3],[523,.4],[494,.3],[440,.3],[392,.4],[330,.3],[349,.5]];
+  let t=0;for(const[f,d]of mel){const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,AC.currentTime+t);g.gain.linearRampToValueAtTime(.12,AC.currentTime+t+.03);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+t+d*.9);o.connect(g);g.connect(GN);o.start(AC.currentTime+t);o.stop(AC.currentTime+t+d);ONS.push(o);t+=d;}
+  if(mp)setTimeout(playM,t*1000+800);
+}
+st.textContent='🚀 选关后直接按字母键开始！';
 </script>
 </body>
 </html>
