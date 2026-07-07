@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>星空大战 - 在线闯关射击游戏</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1a;font-family:'Microsoft YaHei','PingFang SC',sans-serif;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#wrapper{width:100%;height:100%;display:flex;flex-direction:column;position:relative}
+canvas{display:block;width:100%;flex:1;touch-action:none;cursor:crosshair;background:#000}
+.hud{background:rgba(0,0,0,.8);padding:6px 14px;display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:13px;border-bottom:1px solid rgba(74,124,247,.2)}
+.hud .hl{color:#f5a623}
+.hud .wpn{color:#4a7cf7;font-size:11px}
+.top-bar{background:linear-gradient(135deg,#0a0a2e,#1a1a4e);padding:8px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(74,124,247,.1)}
+.top-bar .logo{font-size:16px;font-weight:700;color:#4a7cf7}
+.top-bar .logo span{color:#f5a623}
+.top-bar .music-btn{background:none;border:1px solid rgba(74,124,247,.3);color:#8895b0;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer}
+.top-bar .music-btn.on{color:#f5a623;border-color:#f5a623}
+.notice{background:rgba(245,166,35,.08);border-top:1px solid rgba(245,166,35,.2);padding:3px 10px;text-align:center;font-size:9px;color:#665533;line-height:1.4}
+@media(min-width:800px){#wrapper{max-width:820px;margin:0 auto}canvas{border-radius:0 0 12px 12px}}
+</style>
+</head>
+<body>
+<div id="wrapper">
+<div class="top-bar">
+  <div class="logo">🌌 星空<span>大战</span></div>
+  <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🔇 音乐</button>
+</div>
+<div class="hud">
+  <span>⭐ <b id="score">0</b></span>
+  <span class="wpn" id="weapon">🔫 <span id="levelName">toobey</span></span>
+  <span>❤️ <b id="lives">99</b></span>
+</div>
+<canvas id="c"></canvas>
+<div class="notice" id="noticeBar">
+  ⚠️ 本游戏仅供娱乐 ｜ 适度游戏益脑，沉迷游戏伤身 ｜ 注意保护视力，合理安排时间
+</div>
+</div>
+<script>
+var c=document.getElementById('c'),ctx=c.getContext('2d');
+function resize(){
+  var r=document.getElementById('wrapper').getBoundingClientRect();
+  c.width=Math.min(800,window.innerWidth-4);
+  c.height=Math.min(600,window.innerHeight-100);
+}
+resize();window.addEventListener('resize',resize);
+
+// ===== GAME STATE =====
+var G={state:'menu',level:1,score:0,lives:99,maxLevel:9,mx:c.width/2,my:c.height-80,clicked:false,frame:0};
+function gw(l){return Math.min(10,Math.floor(l/10)+1)}
+function gwc(l){var a=[{c:1,s:0,d:10,sp:8,l:'单发'},{c:2,s:7,d:10,sp:8,l:'双发'},{c:3,s:9,d:10,sp:9,l:'三发'},{c:3,s:11,d:7,sp:10,l:'速射'},{c:5,s:13,d:9,sp:10,l:'散弹'},{c:5,s:15,d:6,sp:11,l:'散速'},{c:7,s:17,d:7,sp:12,l:'烈焰'},{c:7,s:19,d:5,sp:13,l:'烈速'},{c:9,s:21,d:5,sp:14,l:'星辰'},{c:11,s:23,d:4,sp:15,l:'耀斑'}];return a[Math.min(l-1,a.length-1)];}
+function glc(l){
+  var a=[{},
+    {e:6,sp:1.0,fr:150,sr:150,sm:5,bh:0,sc:100,ba:0,la:'初入星空'},
+    {e:8,sp:1.3,fr:130,sr:130,sm:6,bh:0,sc:200,ba:0,la:'陨石带'},
+    {e:10,sp:1.6,fr:110,sr:110,sm:7,bh:0,sc:300,ba:0,la:'暗夜巡逻'},
+    {e:10,sp:1.9,fr:95,sr:95,sm:8,bh:0,sc:400,ba:0,la:'敌方前哨'},
+    {e:12,sp:2.4,fr:75,sr:75,sm:10,bh:0,sc:600,ba:0,la:'穿越火线'},
+    {e:14,sp:2.6,fr:68,sr:68,sm:11,bh:0,sc:700,ba:0,la:'星际风暴'},
+    {e:14,sp:2.9,fr:60,sr:60,sm:12,bh:0,sc:800,ba:0,la:'死亡星域'},
+    {e:16,sp:3.1,fr:52,sr:52,sm:13,bh:0,sc:900,ba:0,la:'终极挑战'},
+    {e:12,sp:3.5,fr:45,sr:45,sm:20,bh:5,sc:1000,ba:1,la:'⭐最终之战'}
+  ];
+  return a[l]||a[1];
+}
+
+var player={x:c.width/2,y:c.height-80,w:40,h:40,cd:0};
+var bullets=[],enemies=[],ebullets=[],particles=[],boss=null;
+var stars=[];
+for(var i=0;i<100;i++)stars.push({x:Math.random()*c.width,y:Math.random()*c.height,sz:Math.random()*2+0.5,sp:Math.random()*1.2+0.3});
+var killCount=0; // enemies killed in current level
+
+function rc(a,b){return a.x-a.w/2<b.x+b.w/2&&a.x+a.w/2>b.x-b.w/2&&a.y-a.h/2<b.y+b.h/2&&a.y+a.h/2>b.y-b.h/2;}
+function se(){var cfg=glc(G.level);if(enemies.length<cfg.sm)enemies.push({x:Math.random()*(c.width-60)+30,y:-30,w:30,h:30,hp:1,sp:cfg.sp+Math.random()*0.5,ft:Math.floor(Math.random()*cfg.fr)});}
+function sb(){var cfg=glc(G.level);boss={x:c.width/2,y:-60,w:80,h:60,hp:cfg.bh,mh:cfg.bh,sp:1.2,dir:1,ft:0,hf:0};}
+function ap(x,y,col,n){for(var i=0;i<n;i++){var a=Math.random()*6.28,s=Math.random()*3+1;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:30+Math.random()*20,ml:50,col,sz:Math.random()*4+2});}}
+
+function il(l, preserveWpn){
+  if(!preserveWpn){
+    G.level=l;G.score=0;
+  }else{
+    var wl=gw(G.score);
+    G.level=l;
+    G.score=Math.max(0,(wl-1)*10);
+  }
+  killCount=0; // reset kill counter
+  bullets=[];enemies=[];ebullets=[];particles=[];boss=null;
+  player.x=G.mx;player.y=Math.min(G.my,c.height-30);
+  var cfg=glc(l);
+  for(var i=0;i<Math.min(cfg.ba?2:3,cfg.sm);i++)se();
+  G.state='playing';
+}
+
+function update(){
+  G.frame++;if(G.state!=='playing')return;
+  var cfg=glc(G.level);
+  player.x=G.mx;player.y=Math.min(G.my,c.height-30);
+  
+  if(G.clicked){
+    if(player.cd<=0){
+      var wl=gw(G.score),c2=gwc(wl);
+      for(var i=0;i<c2.c;i++){var off=(i-(c2.c-1)/2)*c2.s;bullets.push({x:player.x+off,y:player.y-20,w:4,h:12,sp:c2.sp});}
+      player.cd=c2.d;
+      playShot(); // bullet sound
+    }
+  }
+  if(player.cd>0)player.cd--;
+  
+  for(var i=bullets.length-1;i>=0;i--){
+    bullets[i].y-=bullets[i].sp;
+    if(bullets[i].y<-20){bullets.splice(i,1);continue;}
+    var hit=false;
+    for(var j=enemies.length-1;j>=0;j--){
+      if(rc(bullets[i],enemies[j])){ap(enemies[j].x,enemies[j].y,'#f5a623',10);enemies.splice(j,1);G.score+=10;killCount++;hit=true;break;}
+    }
+    if(hit){bullets.splice(i,1);continue;}
+    if(boss&&rc(bullets[i],boss)){boss.hp--;boss.hf=8;ap(bullets[i].x,bullets[i].y,'#e74c3c',5);bullets.splice(i,1);G.score+=5;if(boss.hp<=0){ap(boss.x,boss.y,'#e74c3c',40);boss=null;G.score+=50;killCount++;}continue;}
+  }
+  
+  // Normal enemy spawning
+  if(G.frame%cfg.sr===0&&enemies.length<cfg.sm)se();
+  // Boss level: spawn boss when ready
+  if(cfg.ba&&!boss&&enemies.length===0&&G.frame>120)sb();
+  // After boss dies, respawn enemies if still need kills
+  if(cfg.ba&&!boss&&killCount<20){
+    if(G.frame%60===0&&enemies.length<cfg.sm)se();
+  }
+  
+  for(var i=enemies.length-1;i>=0;i--){
+    var e=enemies[i];e.y+=e.sp;
+    e.ft--;if(e.ft<=0&&e.y>20){ebullets.push({x:e.x,y:e.y+15,w:4,h:6,sp:3});e.ft=cfg.fr+Math.floor(Math.random()*30);}
+    if(e.y>c.height+40){enemies.splice(i,1);continue;}
+    if(rc(e,player)){
+      ap(e.x,e.y,'#f5a623',15);enemies.splice(i,1);
+      hitPlayer();
+    }
+  }
+  
+  // Enemy passes defense line (bottom of screen)
+  for(var i=enemies.length-1;i>=0;i--){
+    var e=enemies[i];
+    if(e.y>c.height+20){
+      enemies.splice(i,1);
+      hitPlayer();
+    }
+  }
+  
+  for(var i=ebullets.length-1;i>=0;i--){
+    var eb=ebullets[i];eb.y+=eb.sp;
+    if(eb.y>c.height+20){ebullets.splice(i,1);continue;}
+    if(rc(eb,player)){
+      ap(player.x,player.y,'#4a7cf7',10);ebullets.splice(i,1);
+      hitPlayer();
+    }
+  }
+  
+  if(boss){
+    // Boss movement varies by level
+    if(G.level===5){
+      // Level 5: sine wave pattern
+      boss.x+=boss.sp*boss.dir;
+      if(boss.x>c.width-60||boss.x<60)boss.dir*=-1;
+      boss.y+=Math.sin(G.frame*0.03)*0.8;
+      if(boss.y<40)boss.y=40;if(boss.y>120)boss.y=120;
+    } else if(G.level===8){
+      // Level 8: fast dash + pause
+      if(G.frame%120<80){
+        boss.x+=boss.sp*2.5*boss.dir;
+        if(boss.x>c.width-60||boss.x<60)boss.dir*=-1;
+      }
+      if(boss.y<60)boss.y+=0.8;
+    } else {
+      // Level 10: complex zigzag
+      boss.x+=boss.sp*1.8*boss.dir;
+      if(boss.x>c.width-60||boss.x<60)boss.dir*=-1;
+      boss.y+=Math.sin(G.frame*0.05)*1.2;
+      if(boss.y<30)boss.y=30;if(boss.y>130)boss.y=130;
+    }
+    if(boss.hf>0)boss.hf--;
+    boss.ft--;
+    if(boss.ft<=0){for(var a=-1;a<=1;a++)ebullets.push({x:boss.x+a*20,y:boss.y+30,w:5,h:8,sp:3.5});boss.ft=40;}
+    if(rc(boss,player)){ap(boss.x,boss.y,'#e74c3c',20);G.lives-=2;if(G.lives<=0)G.state='gameOver';}
+  }
+  
+  for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1);}
+  
+  // Win / Level clear
+  if(G.level===G.maxLevel&&G.score>=10000){celebrate();G.state='win';return;}
+  if(!cfg.ba&&G.level<G.maxLevel){
+    if(killCount>=20&&enemies.length===0&&G.frame>120){celebrate();G.state='levelClear';return;}
+  }else{
+    if(!boss&&enemies.length===0&&G.frame>180&&killCount>=20){celebrate();G.state=G.level>=G.maxLevel?'win':'levelClear';return;}
+  }
+}
+
+// ===== Hit Player ======
+function celebrate(){
+  // Victory celebration particles
+  for(var i=0;i<60;i++){
+    var a=Math.random()*6.28,s=Math.random()*5+2;
+    var col=['#f5a623','#4a7cf7','#27ae60','#e74c3c','#fff','#8e44ad'][Math.floor(Math.random()*6)];
+    particles.push({x:c.width/2+Math.random()*c.width*0.6-c.width*0.3,
+      y:c.height/2+Math.random()*c.height*0.4-c.height*0.2,
+      vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:60+Math.random()*40,ml:100,col:col,sz:Math.random()*6+3});
+  }
+  // Try to play a victory sound
+  try{
+    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    var notes=[523,659,784,1047];
+    for(var i=0;i<notes.length;i++){
+      var osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+      osc.connect(gain);gain.connect(audioCtx.destination);
+      osc.type='square';osc.frequency.value=notes[i];
+      gain.gain.setValueAtTime(0.06,audioCtx.currentTime+i*0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+i*0.12+0.1);
+      osc.start(audioCtx.currentTime+i*0.12);osc.stop(audioCtx.currentTime+i*0.12+0.1);
+    }
+  }catch(e){}
+}
+function hitPlayer(){
+  var wl=gw(G.score);
+  if(wl>1){
+    // 被击中不削减分数，仅降低武器等级
+    var newScore=Math.max(0,(wl-2)*10);
+    G.score=Math.max(G.score-10,0);
+    ap(player.x,player.y,'#ff6b6b',8);
+  }else{
+    G.lives--;
+    ap(player.x,player.y,'#e74c3c',12);
+    if(G.lives<=0)G.state='gameOver';
+  }
+}
+
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,c.width,c.height);
+  stars.forEach(function(s){s.y+=s.sp;if(s.y>c.height){s.y=0;s.x=Math.random()*c.width;}ctx.fillStyle='rgba(255,255,255,'+(0.3+Math.random()*0.5)+')';ctx.fillRect(s.x,s.y,s.sz,s.sz);});
+  var fs=Math.min(c.width/16,36);
+  
+  if(G.state==='menu'){
+    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#fff';ctx.font='bold '+fs+'px Microsoft YaHei';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🚀 星空大战',c.width/2,c.height*0.22);
+    ctx.font=(fs*0.4)+'px Microsoft YaHei';ctx.fillStyle='#8895b0';
+    ctx.fillText('9关闯关 · 击杀20个小兵过关 · Boss战 · 武器升级',c.width/2,c.height*0.33);
+    ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.35)+'px Microsoft YaHei';
+    ctx.fillText('触屏滑动控制 · 按住开火',c.width/2,c.height*0.44);
+    ctx.fillStyle='#f5a623';ctx.font=(fs*0.3)+'px Microsoft YaHei';
+    ctx.fillText('⚡ 被击中武器会降级，小心操作！',c.width/2,c.height*0.51);
+    // Level selection grid
+    ctx.textBaseline='middle';
+    var gridY=c.height*0.56,gridH=c.height*0.32,btnW=c.width*0.085,btnH=gridH*0.42,gap=c.width*0.005;
+    var gridW=btnW*9+gap*8;
+    var startX=(c.width-gridW)/2;
+    ctx.textAlign='center';
+    for(var i=0;i<9;i++){
+      var bx=startX+i*(btnW+gap),by=gridY;
+      var col=i<5?'#4a7cf7':'#8e44ad';
+      ctx.fillStyle='rgba(0,0,0,.4)';
+      ctx.fillRect(bx-2,by-2,btnW+4,btnH+4);
+      ctx.fillStyle=col;
+      ctx.fillRect(bx,by,btnW,btnH);
+      ctx.fillStyle='#fff';ctx.font='bold '+(fs*0.2)+'px Microsoft YaHei';
+      ctx.fillText(glc(i+1).la||'第'+(i+1)+'关',bx+btnW/2,by+btnH*0.35);
+      ctx.font=(fs*0.13)+'px Microsoft YaHei';
+      ctx.fillStyle='rgba(255,255,255,.5)';
+      ctx.fillText('第'+(i+1)+'关',bx+btnW/2,by+btnH*0.75);
+      // Boss badge
+      if(i+1===5||i+1===8){
+        ctx.fillStyle='rgba(231,76,60,.8)';ctx.font='bold '+(fs*0.13)+'px Microsoft YaHei';
+        ctx.fillText('🐉',bx+btnW-12,by+8);
+      }
+    }
+    ctx.fillStyle='#666';ctx.font=(fs*0.18)+'px Microsoft YaHei';ctx.textAlign='center';
+    ctx.fillText('点击上方关卡直接挑战 | 点击空白处从第1关开始',c.width/2,c.height*0.91);
+    // Compliance notice - prominent
+    ctx.textBaseline='bottom';
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(c.width*0.05,c.height-66,c.width*0.9,56);
+    ctx.fillStyle='rgba(255,80,80,.5)';ctx.font='bold '+(fs*0.28)+'px Microsoft YaHei';ctx.textAlign='center';
+    ctx.fillText('【健康游戏忠告】',c.width/2,c.height-24);
+    ctx.fillStyle='rgba(255,255,255,.35)';ctx.font=(fs*0.22)+'px Microsoft YaHei';
+    ctx.fillText('抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。',c.width/2,c.height-46);
+    ctx.fillText('适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。',c.width/2,c.height-68);
+    return;
+  }
+  if(G.state==='gameOver'){
+    ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#e74c3c';ctx.font='bold '+fs+'px Microsoft YaHei';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('💀 游戏结束',c.width/2,c.height*0.28);
+    ctx.fillStyle='#fff';ctx.font=(fs*0.45)+'px Microsoft YaHei';
+    ctx.fillText('得分: '+G.score,c.width/2,c.height*0.40);
+    ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.32)+'px Microsoft YaHei';
+    ctx.fillText('点击重新开始',c.width/2,c.height*0.55);
+    ctx.fillStyle='#666';ctx.font=(fs*0.22)+'px Microsoft YaHei';
+    ctx.fillText('适度游戏益脑，沉迷游戏伤身',c.width/2,c.height*0.70);
+    return;
+  }
+  if(G.state==='levelClear'){
+    ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#f5a623';ctx.font='bold '+(fs*0.85)+'px Microsoft YaHei';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🎯 第'+G.level+'关通过！',c.width/2,c.height*0.30);
+    var nl=glc(G.level+1);
+    ctx.fillStyle='#fff';ctx.font=(fs*0.38)+'px Microsoft YaHei';
+    ctx.fillText('下一关: '+nl.la+' | 得分: '+G.score,c.width/2,c.height*0.42);
+    ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.32)+'px Microsoft YaHei';
+    ctx.fillText('点击进入下一关',c.width/2,c.height*0.55);
+    return;
+  }
+  if(G.state==='win'){
+    ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#f5a623';ctx.font='bold '+(fs*0.85)+'px Microsoft YaHei';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🎉 恭喜通关全部9关！',c.width/2,c.height*0.28);
+    ctx.fillStyle='#fff';ctx.font=(fs*0.45)+'px Microsoft YaHei';
+    ctx.fillText('总得分: '+G.score,c.width/2,c.height*0.40);
+    ctx.fillStyle='#4a7cf7';ctx.font=(fs*0.32)+'px Microsoft YaHei';
+    ctx.fillText('点击重新开始',c.width/2,c.height*0.55);
+    return;
+  }
+  
+  // HUD
+  var wl=gw(G.score),wc=gwc(wl);
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,c.width,28);
+  ctx.fillStyle='#fff';ctx.font='13px Microsoft YaHei';ctx.textAlign='left';
+  ctx.fillText('⭐'+G.score+' ❤️'+G.lives+' 🔫Lv.'+wl+' '+(glc(G.level).la||'')+' 第'+G.level+'关',10,20);
+  // Back to menu button
+  ctx.textAlign='right';
+  ctx.fillStyle='rgba(74,124,247,.2)';ctx.fillRect(c.width-70,4,64,22);
+  ctx.strokeStyle='rgba(74,124,247,.4)';ctx.lineWidth=0.5;ctx.strokeRect(c.width-70,4,64,22);
+  ctx.fillStyle='rgba(74,124,247,.8)';ctx.font='12px Microsoft YaHei';
+  ctx.fillText('🏠 主页',c.width-8,20);
+  
+  // Player
+  var ps=Math.min(c.width/22,20);
+  ctx.shadowColor='#4a7cf7';ctx.shadowBlur=15;
+  ctx.fillStyle='#4a7cf7';
+  ctx.beginPath();ctx.moveTo(player.x,player.y-ps);ctx.lineTo(player.x-ps*0.8,player.y+ps*0.6);ctx.lineTo(player.x-ps*0.25,player.y+ps*0.25);ctx.lineTo(player.x,player.y+ps*0.6);ctx.lineTo(player.x+ps*0.25,player.y+ps*0.25);ctx.lineTo(player.x+ps*0.8,player.y+ps*0.6);ctx.closePath();ctx.fill();
+  ctx.shadowBlur=20;ctx.fillStyle='#f5a623';
+  ctx.beginPath();ctx.moveTo(player.x-ps*0.25,player.y+ps*0.5);ctx.lineTo(player.x,player.y+ps+Math.random()*ps*0.25);ctx.lineTo(player.x+ps*0.25,player.y+ps*0.5);ctx.fill();
+  ctx.shadowBlur=0;
+  
+  ctx.fillStyle='#f5a623';ctx.shadowColor='#f5a623';ctx.shadowBlur=6;
+  bullets.forEach(function(b){ctx.fillRect(b.x-2,b.y-6,4,12);});
+  ctx.shadowBlur=0;
+  
+  enemies.forEach(function(e){
+    ctx.shadowColor='#e74c3c';ctx.shadowBlur=8;ctx.fillStyle='#e74c3c';
+    ctx.beginPath();ctx.moveTo(e.x,e.y+14);ctx.lineTo(e.x-14,e.y-7);ctx.lineTo(e.x-5,e.y-3);ctx.lineTo(e.x,e.y-12);ctx.lineTo(e.x+5,e.y-3);ctx.lineTo(e.x+14,e.y-7);ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='#fff';
+    ctx.fillRect(e.x-5,e.y-1,3,3);ctx.fillRect(e.x+2,e.y-1,3,3);
+  });
+  ctx.shadowBlur=0;
+  ebullets.forEach(function(b){ctx.fillStyle='#ff6b6b';ctx.shadowColor='#ff6b6b';ctx.shadowBlur=4;ctx.fillRect(b.x-2,b.y-3,4,6);});
+  ctx.shadowBlur=0;
+  
+  // Boss - 3 different forms based on level
+  if(boss){
+    var bx=boss.x,by=boss.y;
+    ctx.shadowColor='#e74c3c';ctx.shadowBlur=18;
+    
+    // Boss form depends on level
+    if(G.level===5){
+      // Level 5: Triangular warship (绿色)
+      ctx.fillStyle=boss.hf>0?'#fff':'#27ae60';
+      ctx.beginPath();
+      ctx.moveTo(bx,by-34);ctx.lineTo(bx-40,by+20);ctx.lineTo(bx-28,by+16);ctx.lineTo(bx-14,by+28);
+      ctx.lineTo(bx-6,by+10);ctx.lineTo(bx+6,by+10);ctx.lineTo(bx+14,by+28);
+      ctx.lineTo(bx+28,by+16);ctx.lineTo(bx+40,by+20);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#e74c3c';ctx.shadowColor='#e74c3c';ctx.shadowBlur=8;
+      ctx.fillRect(bx-20,by-8,8,6);ctx.fillRect(bx+12,by-8,8,6);
+    } else if(G.level===8){
+      // Level 8: Diamond shape (紫色)
+      ctx.fillStyle=boss.hf>0?'#fff':'#8e44ad';
+      ctx.beginPath();
+      ctx.moveTo(bx,by-36);ctx.lineTo(bx-44,by-8);ctx.lineTo(bx-36,by+8);ctx.lineTo(bx-24,by-4);
+      ctx.lineTo(bx-16,by+24);ctx.lineTo(bx-8,by+14);ctx.lineTo(bx,by+30);
+      ctx.lineTo(bx+8,by+14);ctx.lineTo(bx+16,by+24);ctx.lineTo(bx+24,by-4);
+      ctx.lineTo(bx+36,by+8);ctx.lineTo(bx+44,by-8);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#e74c3c';ctx.shadowColor='#e74c3c';ctx.shadowBlur=10;
+      ctx.fillRect(bx-18,by-16,8,8);ctx.fillRect(bx+10,by-16,8,8);
+      // Extra horns
+      ctx.fillStyle=boss.hf>0?'#fff':'#f39c12';
+      ctx.beginPath();ctx.moveTo(bx-10,by-36);ctx.lineTo(bx-18,by-50);ctx.lineTo(bx-4,by-42);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(bx+10,by-36);ctx.lineTo(bx+18,by-50);ctx.lineTo(bx+4,by-42);ctx.closePath();ctx.fill();
+    } else {
+      // Level 10: Final boss (红色巨舰)
+      ctx.fillStyle=boss.hf>0?'#fff':'#c0392b';
+      ctx.beginPath();
+      ctx.moveTo(bx,by-38);ctx.lineTo(bx-48,by-10);ctx.lineTo(bx-40,by+6);ctx.lineTo(bx-28,by-6);
+      ctx.lineTo(bx-20,by+22);ctx.lineTo(bx-10,by+12);ctx.lineTo(bx,by+32);
+      ctx.lineTo(bx+10,by+12);ctx.lineTo(bx+20,by+22);ctx.lineTo(bx+28,by-6);
+      ctx.lineTo(bx+40,by+6);ctx.lineTo(bx+48,by-10);ctx.closePath();ctx.fill();
+      // Red glowing eyes
+      ctx.shadowColor='#ff0000';ctx.shadowBlur=20;
+      ctx.fillStyle='#ff0000';
+      ctx.fillRect(bx-22,by-14,10,10);ctx.fillRect(bx+12,by-14,10,10);
+      ctx.shadowBlur=0;
+      // Crown/crest
+      ctx.fillStyle='#f5a623';
+      for(var ci=-2;ci<=2;ci++){ctx.fillRect(bx+ci*8-2,by-46,4,10);}
+    }
+    ctx.shadowBlur=0;
+    // HP bar
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(bx-40,by-50,80,5);
+    ctx.fillStyle='#27ae60';ctx.fillRect(bx-40,by-50,80*(boss.hp/boss.mh),5);
+    ctx.strokeStyle='#fff';ctx.lineWidth=0.5;ctx.strokeRect(bx-40,by-50,80,5);
+  }
+  
+  particles.forEach(function(p){ctx.globalAlpha=p.life/p.ml;ctx.fillStyle=p.col;ctx.fillRect(p.x,p.y,p.sz*p.life/p.ml,p.sz*p.life/p.ml);});
+  ctx.globalAlpha=1;
+}
+
+function loop(){update();draw();requestAnimationFrame(loop)}
+
+// ===== MUSIC & SOUND =====
+var audioCtx=null,musicOn=false,musicNodes=null;
+function toggleMusic(){
+  musicOn=!musicOn;
+  document.getElementById('musicBtn').textContent=musicOn?'🔊 音乐':'🔇 音乐';
+  document.getElementById('musicBtn').classList.toggle('on',musicOn);
+  if(musicOn)startMusic();else stopMusic();
+}
+
+function playShot(){
+  try{
+    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    var osc=audioCtx.createOscillator();
+    var gain=audioCtx.createGain();
+    osc.connect(gain);gain.connect(audioCtx.destination);
+    osc.type='square';osc.frequency.setValueAtTime(880,audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440,audioCtx.currentTime+0.05);
+    gain.gain.setValueAtTime(0.08,audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.08);
+    osc.start(audioCtx.currentTime);osc.stop(audioCtx.currentTime+0.08);
+  }catch(e){}
+}
+
+function startMusic(){
+  try{
+    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    
+    // Epic melody - heroic/激昂 theme
+    var notes=[
+      523,659,784,1047, 784,659,784,1047,  // C E G C' G E G C'
+      784,880,1047,1175, 1047,880,784,659,  // G A C' D' C' A G E
+      659,784,880,659, 523,659,784,523,     // E G A E C E G C
+      784,880,1047,784, 659,523,392,330,    // G A C' G E C F E
+      392,440,523,660, 784,880,1047,784,    // F A C E G A C' G
+      523,659,784,988, 1047,880,784,659,    // C E G B C' A G E
+      784,1047,784,1047, 880,659,523,440,   // G C' G C' A E C F
+      523,660,784,1047, 1175,1047,880,784,  // C E G C' D' C' A G
+    ];
+    // Bass line (1 octave lower)
+    var bass=[];
+    for(var i=0;i<notes.length;i++)bass.push(notes[i]/2);
+    
+    var bpm=150;
+    var noteLen=60/bpm/2;
+    var totalLen=notes.length*noteLen;
+    var bufSize=audioCtx.sampleRate*totalLen;
+    var buf=audioCtx.createBuffer(1,bufSize,audioCtx.sampleRate);
+    var data=buf.getChannelData(0);
+    
+    for(var i=0;i<notes.length;i++){
+      var freq=notes[i];
+      var bf=bass[i];
+      var startSample=Math.floor(i*noteLen*audioCtx.sampleRate);
+      var endSample=Math.floor((i+1)*noteLen*audioCtx.sampleRate);
+      for(var s=startSample;s<endSample&&s<bufSize;s++){
+        var t=s/audioCtx.sampleRate;
+        var localT=t-i*noteLen;
+        var envelope=Math.max(0,1-localT/(noteLen*0.6));
+        // Square wave lead
+        data[s]+=(Math.sin(2*Math.PI*freq*t)>0?0.07:-0.07)*envelope;
+        // Third harmonic for richness
+        data[s]+=Math.sin(2*Math.PI*freq*2*t)*0.025*envelope;
+        data[s]+=Math.sin(2*Math.PI*freq*3*t)*0.015*envelope;
+        // Bass
+        data[s]+=(Math.sin(2*Math.PI*bf*t)>0?0.05:-0.05)*envelope*0.6;
+      }
+    }
+    
+    var source=audioCtx.createBufferSource();
+    source.buffer=buf;
+    source.loop=true;
+    source.connect(audioCtx.destination);
+    source.start();
+    musicNodes=source;
+  }catch(e){console.log('Music error:',e);}
+}
+
+function stopMusic(){
+  if(musicNodes){
+    try{musicNodes.stop();}catch(e){}
+    musicNodes=null;
+  }
+}
+
+// ===== Input =====
+function gp(e){
+  var r=c.getBoundingClientRect();
+  var cx,cy;
+  if(e.touches){cx=e.touches[0].clientX;cy=e.touches[0].clientY;}
+  else{cx=e.clientX;cy=e.clientY;}
+  return {x:(cx-r.left)*(c.width/r.width),y:(cy-r.top)*(c.height/r.height)};
+}
+
+function hd(e){e.preventDefault();var p=gp(e);G.mx=p.x;G.my=p.y;
+  if(G.state==='gameOver'||G.state==='win'){G.score=0;G.lives=99;G.frame=0;il(1);return;}
+  if(G.state==='levelClear'){il(G.level+1,true);return;}
+  if(G.state==='menu'){
+    // Check if clicking on a level button (canvas coords)
+    var gw=c.width,gh=c.height;
+    var gridY=gh*0.56,btnW=gw*0.085,btnH=gh*0.134,gap=gw*0.005;
+    var gridW=btnW*9+gap*8,startX=(gw-gridW)/2;
+    for(var i=0;i<9;i++){
+      var bx=startX+i*(btnW+gap);
+      if(p.x>=bx&&p.x<=bx+btnW&&p.y>=gridY&&p.y<=gridY+btnH){
+        G.score=0;G.lives=99;G.frame=0;il(i+1);
+        return;
+      }
+    }
+    // Click elsewhere = start from level 1
+    G.score=0;G.lives=99;G.frame=0;il(1);
+    return;
+  }
+  if(G.state==='playing'){
+    // Check if clicking the "主页" button (top right corner)
+    if(p.x>=c.width-70&&p.x<=c.width-6&&p.y>=4&&p.y<=26){
+      G.state='menu';bullets=[];enemies=[];ebullets=[];particles=[];boss=null;
+      return;
+    }
+    G.clicked=true;
+  }
+}
+function hm(e){e.preventDefault();var p=gp(e);G.mx=p.x;G.my=p.y;}
+function hu(e){e.preventDefault();G.clicked=false;}
+
+c.addEventListener('mousedown',hd);c.addEventListener('mousemove',hm);c.addEventListener('mouseup',hu);c.addEventListener('mouseleave',function(){G.clicked=false});
+c.addEventListener('touchstart',hd);c.addEventListener('touchmove',hm);c.addEventListener('touchend',hu);c.addEventListener('touchcancel',function(){G.clicked=false});
+
+loop();
+</script>
+</body>
+</html>
